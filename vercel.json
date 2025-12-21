@@ -3,7 +3,17 @@
   "framework": "nextjs",
   "functions": {
     "app/api/process/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/process",
+      "methods": ["POST"],
+      "headers": {
+        "x-vercel-payload-max-size": "10485760"
+      }
+    }
+  ]
 }

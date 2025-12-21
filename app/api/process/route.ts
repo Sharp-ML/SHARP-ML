@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import Replicate from "replicate";
 
+// Route segment config for App Router
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 // Generate unique filename
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -27,6 +31,8 @@ export async function POST(request: NextRequest) {
 
     // Check for required environment variables
     const replicateToken = process.env.REPLICATE_API_TOKEN;
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    
     if (!replicateToken) {
       return NextResponse.json(
         {
@@ -36,6 +42,22 @@ export async function POST(request: NextRequest) {
             step1: "Get your API token from https://replicate.com/account/api-tokens",
             step2: "Add REPLICATE_API_TOKEN to your Vercel environment variables",
             step3: "Redeploy your application",
+          },
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (!blobToken) {
+      return NextResponse.json(
+        {
+          error: "Server configuration error",
+          message: "BLOB_READ_WRITE_TOKEN is not configured. Please add it to your environment variables.",
+          setup: {
+            step1: "Go to your Vercel project dashboard",
+            step2: "Navigate to Storage > Create Database > Blob",
+            step3: "Connect the Blob storage to your project - this will auto-add BLOB_READ_WRITE_TOKEN",
+            step4: "Redeploy your application",
           },
         },
         { status: 500 }
@@ -117,24 +139,41 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Processing error:", error);
 
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     // Handle specific Replicate errors
     if (error instanceof Error) {
-      if (error.message.includes("authentication")) {
+      if (error.message.includes("authentication") || error.message.includes("Unauthorized")) {
         return NextResponse.json(
-          { error: "Invalid Replicate API token" },
+          { error: "Invalid Replicate API token", details: errorMessage },
           { status: 401 }
         );
       }
       if (error.message.includes("rate limit")) {
         return NextResponse.json(
-          { error: "Rate limit exceeded. Please try again later." },
+          { error: "Rate limit exceeded. Please try again later.", details: errorMessage },
           { status: 429 }
+        );
+      }
+      // Handle Vercel Blob errors
+      if (error.message.includes("BLOB_READ_WRITE_TOKEN") || error.message.includes("blob")) {
+        return NextResponse.json(
+          { 
+            error: "Blob storage error", 
+            details: errorMessage,
+            setup: "Make sure BLOB_READ_WRITE_TOKEN is set in your Vercel environment variables"
+          },
+          { status: 500 }
         );
       }
     }
 
     return NextResponse.json(
-      { error: "Failed to process image" },
+      { 
+        error: "Failed to process image", 
+        details: errorMessage,
+        hint: "Check Vercel function logs for more details"
+      },
       { status: 500 }
     );
   }

@@ -2,26 +2,46 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, Image as ImageIcon, X, ArrowRight } from "lucide-react";
+import { UploadIcon } from "@/components/ui/upload";
+import { XIcon } from "@/components/ui/x";
+import { ArrowRightIcon } from "@/components/ui/arrow-right";
+import { ImageIcon } from "@/components/ui/image";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import PixelatedImage from "./PixelatedImage";
+
+// 4.5MB limit to stay safely under Vercel's serverless function limit
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024;
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
   disabled?: boolean;
+  onError?: (error: string) => void;
 }
 
 export default function ImageUpload({
   onImageSelect,
   disabled,
+  onError,
 }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileSizeError, setFileSizeError] = useState<string | null>(null);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
+      setFileSizeError(null);
       if (acceptedFiles.length > 0 && !disabled) {
         const file = acceptedFiles[0];
+        
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+          const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+          const error = `File too large (${sizeMB}MB). Maximum size is 4.5MB.`;
+          setFileSizeError(error);
+          onError?.(error);
+          return;
+        }
+        
         setFileName(file.name);
         const reader = new FileReader();
         reader.onload = () => {
@@ -31,7 +51,7 @@ export default function ImageUpload({
         onImageSelect(file);
       }
     },
-    [onImageSelect, disabled]
+    [onImageSelect, disabled, onError]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -40,6 +60,7 @@ export default function ImageUpload({
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
     },
     maxFiles: 1,
+    maxSize: MAX_FILE_SIZE,
     disabled,
   });
 
@@ -47,6 +68,7 @@ export default function ImageUpload({
     e.stopPropagation();
     setPreview(null);
     setFileName(null);
+    setFileSizeError(null);
   };
 
   return (
@@ -74,12 +96,10 @@ export default function ImageUpload({
               className="relative"
             >
               <div className="relative w-full max-w-md mx-auto aspect-[4/3] rounded-xl overflow-hidden border border-[var(--border)]">
-                <Image
+                <PixelatedImage
                   src={preview}
                   alt="Preview"
-                  fill
-                  className="object-cover"
-                  unoptimized
+                  className="absolute inset-0 w-full h-full"
                 />
 
                 {!disabled && (
@@ -87,13 +107,13 @@ export default function ImageUpload({
                     onClick={clearPreview}
                     className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-all border border-[var(--border)] shadow-sm hover:scale-105"
                   >
-                    <X className="w-4 h-4 text-[var(--foreground)]" strokeWidth={1.5} />
+                    <XIcon size={16} className="text-[var(--foreground)]" />
                   </button>
                 )}
 
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
                   <div className="flex items-center gap-2 text-sm text-white">
-                    <ImageIcon className="w-4 h-4" strokeWidth={1.5} />
+                    <ImageIcon size={16} />
                     <span className="truncate">{fileName}</span>
                   </div>
                 </div>
@@ -106,7 +126,7 @@ export default function ImageUpload({
                 className="mt-6 flex items-center justify-center gap-2 text-sm text-[var(--text-muted)]"
               >
                 <span>Processing will begin automatically</span>
-                <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+                <ArrowRightIcon size={16} />
               </motion.div>
             </motion.div>
           ) : (
@@ -123,7 +143,7 @@ export default function ImageUpload({
                 className="relative"
               >
                 <div className="icon-box">
-                  <Upload className="w-5 h-5 text-[var(--text-secondary)]" strokeWidth={1.5} />
+                  <UploadIcon size={20} className="text-[var(--text-secondary)]" />
                 </div>
               </motion.div>
 
@@ -144,9 +164,19 @@ export default function ImageUpload({
                 </span>
                 <span className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />
-                  Max 10MB
+                  Max 4.5MB
                 </span>
               </div>
+
+              {fileSizeError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm"
+                >
+                  {fileSizeError}
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
