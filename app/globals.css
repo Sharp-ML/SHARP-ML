@@ -345,10 +345,12 @@ body {
 .step-card {
   display: flex;
   flex-direction: column;
+  gap: 0px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px;
+  height: fit-content;
   transition: all 0.2s ease;
   min-width: 0;
   flex: 1;
@@ -361,14 +363,14 @@ body {
 }
 
 .step-card-icon {
-  width: 36px;
-  height: 36px;
+  width: fit-content;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 12px;
   color: var(--text-muted);
-  opacity: 0.25;
+  opacity: 0.6;
 }
 
 .step-card-title {
