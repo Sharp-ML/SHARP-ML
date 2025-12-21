@@ -462,21 +462,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0px;
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 18px;
   height: fit-content;
-  transition: all 0.2s ease;
   min-width: 0;
   flex: 1;
   align-self: stretch;
 }
 
-.step-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-}
+/* No hover effects on step cards */
 
 .step-card-icon {
   width: fit-content;
