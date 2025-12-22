@@ -989,7 +989,7 @@ function HomeContent() {
             </a>
             <button
               onClick={() => signOut()}
-              className="text-link"
+              className="text-link cursor-pointer"
             >
               Log out
             </button>
