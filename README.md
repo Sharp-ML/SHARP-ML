@@ -71,7 +71,7 @@ npm i -g vercel
 vercel
 ```
 
-### Step 6: Configure Environment Variables
+### Step 5: Configure Environment Variables
 
 In your Vercel project settings, add all required environment variables:
 
@@ -103,7 +103,7 @@ BLOB_READ_WRITE_TOKEN="..."
 2. Navigate to **Storage** → **Create Database** → **Blob**
 3. This automatically adds the `BLOB_READ_WRITE_TOKEN`
 
-## 💻 Local Development
+## Local Development
 
 ### 1. Install Dependencies
 
