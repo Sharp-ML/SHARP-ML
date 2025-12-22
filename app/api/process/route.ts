@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { writeFile, mkdir } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 // Route segment config for App Router
 export const runtime = "nodejs";
@@ -8,6 +11,11 @@ export const maxDuration = 300; // 5 minutes for model inference
 // Generate unique filename
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Check if we're in local development mode (no blob token)
+function isLocalDev(): boolean {
+  return !process.env.BLOB_READ_WRITE_TOKEN;
 }
 
 export async function POST(request: NextRequest) {
@@ -30,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Check for required environment variables
     const modalEndpointUrl = process.env.MODAL_ENDPOINT_URL;
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const localDev = isLocalDev();
     
     if (!modalEndpointUrl) {
       return NextResponse.json(
@@ -48,38 +56,36 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    
-    if (!blobToken) {
-      return NextResponse.json(
-        {
-          error: "Server configuration error",
-          message: "BLOB_READ_WRITE_TOKEN is not configured. Please add it to your environment variables.",
-          setup: {
-            step1: "Go to your Vercel project dashboard",
-            step2: "Navigate to Storage > Create Database > Blob",
-            step3: "Connect the Blob storage to your project - this will auto-add BLOB_READ_WRITE_TOKEN",
-            step4: "Redeploy your application",
-          },
-        },
-        { status: 500 }
-      );
-    }
 
     // Generate unique ID for this upload
     const id = generateId();
     const ext = file.name.split(".").pop() || "jpg";
-    const inputFileName = `uploads/${id}.${ext}`;
-
-    // Upload input image to Vercel Blob
-    const blob = await put(inputFileName, file, {
-      access: "public",
-    });
-
-    const imageUrl = blob.url;
-
+    
     // Convert image to base64 for the Modal API call
     const imageBuffer = await file.arrayBuffer();
     const imageBase64 = Buffer.from(imageBuffer).toString("base64");
+    
+    let imageUrl: string;
+    
+    if (localDev) {
+      // Local development: save to public folder
+      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      if (!existsSync(uploadsDir)) {
+        await mkdir(uploadsDir, { recursive: true });
+      }
+      const inputFileName = `${id}.${ext}`;
+      const inputFilePath = path.join(uploadsDir, inputFileName);
+      await writeFile(inputFilePath, Buffer.from(imageBuffer));
+      imageUrl = `/uploads/${inputFileName}`;
+      console.log("Local dev: saved image to", inputFilePath);
+    } else {
+      // Production: upload to Vercel Blob
+      const inputFileName = `uploads/${id}.${ext}`;
+      const blob = await put(inputFileName, file, {
+        access: "public",
+      });
+      imageUrl = blob.url;
+    }
 
     // Call the Apple Sharp model via Modal endpoint
     // The model generates 3D Gaussian splats (PLY format) from a single image
@@ -135,20 +141,36 @@ export async function POST(request: NextRequest) {
     }
 
     const plyBuffer = Buffer.from(plyBase64, "base64");
+    
+    let modelUrl: string;
 
-    // Upload the PLY file to Vercel Blob for permanent storage
-    const modelFileName = `outputs/${id}.ply`;
+    if (localDev) {
+      // Local development: save to public folder
+      const outputsDir = path.join(process.cwd(), "public", "outputs");
+      if (!existsSync(outputsDir)) {
+        await mkdir(outputsDir, { recursive: true });
+      }
+      const modelFileName = `${id}.ply`;
+      const modelFilePath = path.join(outputsDir, modelFileName);
+      await writeFile(modelFilePath, plyBuffer);
+      modelUrl = `/outputs/${modelFileName}`;
+      console.log("Local dev: saved PLY to", modelFilePath);
+    } else {
+      // Production: upload to Vercel Blob
+      const modelFileName = `outputs/${id}.ply`;
+      const modelBlob = await put(modelFileName, new Blob([plyBuffer]), {
+        access: "public",
+        contentType: "application/x-ply",
+      });
+      modelUrl = modelBlob.url;
+      console.log("Successfully uploaded PLY to Vercel Blob:", modelUrl);
+    }
 
-    const modelBlob = await put(modelFileName, new Blob([plyBuffer]), {
-      access: "public",
-      contentType: "application/x-ply",
-    });
-
-    console.log("Successfully generated 3D Gaussian splats:", modelBlob.url);
+    console.log("Successfully generated 3D Gaussian splats:", modelUrl);
 
     return NextResponse.json({
       success: true,
-      modelUrl: modelBlob.url,
+      modelUrl: modelUrl,
       imageUrl: imageUrl,
       modelType: "ply",
       message: "3D Gaussian splats generated successfully using Apple Sharp",

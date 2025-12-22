@@ -23,6 +23,7 @@ from pathlib import Path
 app = modal.App("apple-sharp")
 
 # Define the container image with all dependencies
+# IMPORTANT: Install requests AFTER Sharp to prevent dependency conflicts
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -45,15 +46,19 @@ sharp_image = (
         "timm",
         "huggingface_hub",
         "fastapi",
-        "requests",
     )
     .run_commands(
         # Clone the Sharp repository
         "git clone https://github.com/apple/ml-sharp.git /opt/ml-sharp",
         # Install Sharp package (use --no-deps to avoid overwriting our packages)
         "cd /opt/ml-sharp && pip install -e . --no-deps",
-        # Verify requests is installed
-        "python -c 'import requests; print(requests.__version__)'",
+    )
+    # Install requests AFTER Sharp to ensure it's available at runtime
+    # force_build=True ensures this layer is rebuilt fresh
+    .pip_install("requests", force_build=True)
+    .run_commands(
+        # Verify requests is installed and available
+        "python -c 'import requests; print(\"requests version:\", requests.__version__)'",
     )
 )
 
@@ -68,7 +73,7 @@ MODEL_CACHE_PATH = "/cache/models"
     gpu="A10G",  # Use A10G GPU for good performance/cost ratio
     timeout=300,  # 5 minute timeout
     volumes={MODEL_CACHE_PATH: model_cache},
-    container_idle_timeout=300,  # Keep container warm for 5 minutes
+    scaledown_window=300,  # Keep container warm for 5 minutes
 )
 class SharpModel:
     """Sharp model class for image-to-3D Gaussian splat conversion."""
@@ -161,7 +166,7 @@ class SharpModel:
             with open(ply_path, "rb") as f:
                 return f.read()
 
-    @modal.web_endpoint(method="POST")
+    @modal.fastapi_endpoint(method="POST")
     def generate(self, request: dict) -> dict:
         """
         Web endpoint for generating 3D Gaussian splats from an image.
