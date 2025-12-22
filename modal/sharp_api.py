@@ -18,7 +18,6 @@ import base64
 import tempfile
 import os
 from pathlib import Path
-import requests as http_requests
 
 # Create the Modal app
 app = modal.App("apple-sharp")
@@ -188,7 +187,8 @@ class SharpModel:
                 image_bytes = base64.b64decode(request["image"])
             elif "image_url" in request and request["image_url"]:
                 # Download from URL
-                response = http_requests.get(request["image_url"], timeout=30)
+                import requests
+                response = requests.get(request["image_url"], timeout=30)
                 response.raise_for_status()
                 image_bytes = response.content
             else:
