@@ -922,7 +922,7 @@ function HomeContent() {
                     className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
                   >
                     <a
-                      href="https://x.com/JasonBud"
+                      href="https://x.com/messages/compose?recipient_id=1325862778603769856"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md"

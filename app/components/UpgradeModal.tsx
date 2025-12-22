@@ -12,7 +12,8 @@ interface UpgradeModalProps {
 
 export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModalProps) {
   const handleContactSupport = () => {
-    window.open("https://x.com/JasonBud", "_blank");
+    // Opens a DM compose window on X/Twitter
+    window.open("https://x.com/messages/compose?recipient_id=1325862778603769856", "_blank");
   };
 
   return (
