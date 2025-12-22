@@ -562,6 +562,66 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+  /* Reduce padding on mobile */
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .btn-ghost {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .upload-zone {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .feature-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .feature-pill {
+    padding: 8px 12px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .step-card-icon {
+    font-size: 24px;
+  }
+
+  .code-block {
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  /* Scene container mobile */
+  .scene-container.expanded {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border-radius: 16px;
+  }
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

@@ -696,7 +696,7 @@ export default function GaussianViewer({
               ? "absolute inset-0"
               : isExpanded
                 ? "expanded z-50"
-                : "relative w-full aspect-[16/10]"
+                : "relative w-full aspect-[4/3] sm:aspect-[16/10]"
           }`}
         >
           {/* Viewer container - scales up in video mode to crop edge artifacts */}
@@ -716,10 +716,10 @@ export default function GaussianViewer({
                 isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
               }`}
             >
-              <p className={`text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}>
+              <p className={`text-base sm:text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}>
                 Loading 3D Scene
               </p>
-              <div className={`w-48 h-1.5 rounded-full overflow-hidden ${
+              <div className={`w-36 sm:w-48 h-1.5 rounded-full overflow-hidden ${
                 isExpanded ? "bg-white/10" : "bg-[var(--surface-elevated)]"
               }`}>
                 <motion.div
@@ -729,7 +729,7 @@ export default function GaussianViewer({
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              <p className={`text-sm mt-2 ${isExpanded ? "text-white/60" : "text-[var(--text-muted)]"}`}>
+              <p className={`text-xs sm:text-sm mt-2 ${isExpanded ? "text-white/60" : "text-[var(--text-muted)]"}`}>
                 {loadProgress}%
               </p>
             </motion.div>
@@ -747,12 +747,12 @@ export default function GaussianViewer({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={`absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm z-10 ${
+              className={`absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm z-10 px-4 ${
                 isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
               }`}
             >
-              <p className="text-lg font-medium mb-2 text-red-400">Error</p>
-              <p className={`text-sm text-center max-w-sm ${
+              <p className="text-base sm:text-lg font-medium mb-2 text-red-400">Error</p>
+              <p className={`text-xs sm:text-sm text-center max-w-xs sm:max-w-sm ${
                 isExpanded ? "text-white/60" : "text-[var(--text-muted)]"
               }`}>
                 {error}
@@ -764,21 +764,21 @@ export default function GaussianViewer({
           {!isLoading && !error && !mini && (
             <>
               {/* Top right controls */}
-              <div className={`absolute z-20 pointer-events-auto flex gap-2 ${
-                isExpanded ? "top-4 right-4" : "top-4 right-4"
+              <div className={`absolute z-20 pointer-events-auto flex gap-1.5 sm:gap-2 ${
+                isExpanded ? "top-3 right-3 sm:top-4 sm:right-4" : "top-2 right-2 sm:top-4 sm:right-4"
               }`}>
                 {/* Close button when expanded */}
                 {isExpanded && (
                   <button
                     type="button"
                     onClick={handleCollapse}
-                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer"
                     title="Close"
                   >
-                    <X className="w-5 h-5 text-white" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </button>
                 )}
-                
+
                 {/* Expand button when not expanded */}
                 {!isExpanded && (
                   <button
@@ -787,10 +787,10 @@ export default function GaussianViewer({
                       e.stopPropagation();
                       handleExpand();
                     }}
-                    className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
+                    className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
                     title="Expand"
                   >
-                    <Maximize2 className="w-4 h-4" />
+                    <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 )}
 
@@ -803,16 +803,16 @@ export default function GaussianViewer({
                   }}
                   className={`flex items-center justify-center transition-all cursor-pointer ${
                     isExpanded
-                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
-                      : "p-2.5 rounded-xl glass hover:bg-white/10"
+                      ? "w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      : "p-2 sm:p-2.5 rounded-lg sm:rounded-xl glass hover:bg-white/10"
                   }`}
                   title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
                 >
-                  <Download className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                  <Download className={isExpanded ? "w-4 h-4 sm:w-5 sm:h-5 text-white" : "w-3.5 h-3.5 sm:w-4 sm:h-4"} />
                 </button>
               </div>
 
-              {/* Bottom left instructions / video indicator */}
+              {/* Bottom left instructions / video indicator - hidden on very small screens */}
               <AnimatePresence mode="wait">
                 {viewMode === "scene" ? (
                   <motion.div
@@ -821,20 +821,22 @@ export default function GaussianViewer({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
+                    className={`absolute z-20 hidden xs:block ${isExpanded ? "bottom-4 left-4 sm:bottom-6 sm:left-6" : "bottom-2 left-2 sm:bottom-4 sm:left-4"}`}
                   >
-                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
+                    <div className={`rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs ${
                       isExpanded
                         ? "text-white/60 bg-white/10 backdrop-blur-sm border border-white/20"
                         : "glass text-[var(--text-muted)]"
                     }`}>
-                      <span className="flex items-center gap-1.5">
-                        <MousePointer2 className="w-3.5 h-3.5" />
-                        Drag to rotate
+                      <span className="flex items-center gap-1 sm:gap-1.5">
+                        <MousePointer2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Drag to rotate</span>
+                        <span className="sm:hidden">Rotate</span>
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <Move3D className="w-3.5 h-3.5" />
-                        Scroll to zoom
+                      <span className="flex items-center gap-1 sm:gap-1.5">
+                        <Move3D className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Scroll to zoom</span>
+                        <span className="sm:hidden">Zoom</span>
                       </span>
                     </div>
                   </motion.div>
@@ -845,15 +847,15 @@ export default function GaussianViewer({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
+                    className={`absolute z-20 ${isExpanded ? "bottom-4 left-4 sm:bottom-6 sm:left-6" : "bottom-2 left-2 sm:bottom-4 sm:left-4"}`}
                   >
-                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
+                    <div className={`rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs ${
                       isExpanded
                         ? "bg-white/10 backdrop-blur-sm border border-white/20"
                         : "glass"
                     }`}>
-                      <span className="flex items-center gap-2 text-red-400">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      <span className="flex items-center gap-1.5 sm:gap-2 text-red-400">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500 animate-pulse" />
                         Video Preview
                       </span>
                     </div>
@@ -862,8 +864,8 @@ export default function GaussianViewer({
               </AnimatePresence>
 
               {/* Bottom right Scene/Video toggle */}
-              <div className={`absolute z-20 ${isExpanded ? "bottom-6 right-6" : "bottom-4 right-4"}`}>
-                <div className={`rounded-xl p-1 flex items-center gap-1 ${
+              <div className={`absolute z-20 ${isExpanded ? "bottom-4 right-4 sm:bottom-6 sm:right-6" : "bottom-2 right-2 sm:bottom-4 sm:right-4"}`}>
+                <div className={`rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex items-center gap-0.5 sm:gap-1 ${
                   isExpanded
                     ? "bg-white/10 backdrop-blur-sm border border-white/20"
                     : "glass"
@@ -871,7 +873,7 @@ export default function GaussianViewer({
                   <button
                     type="button"
                     onClick={() => setViewMode("scene")}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
                       viewMode === "scene"
                         ? isExpanded
                           ? "bg-white text-black"
@@ -881,13 +883,13 @@ export default function GaussianViewer({
                           : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
                     }`}
                   >
-                    <Box className="w-3.5 h-3.5" />
+                    <Box className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     Scene
                   </button>
                   <button
                     type="button"
                     onClick={() => setViewMode("video")}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
                       viewMode === "video"
                         ? isExpanded
                           ? "bg-white text-black"
@@ -897,7 +899,7 @@ export default function GaussianViewer({
                           : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
                     }`}
                   >
-                    <Video className="w-3.5 h-3.5" />
+                    <Video className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     Video
                   </button>
                 </div>

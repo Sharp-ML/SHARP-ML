@@ -139,28 +139,29 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <div className="min-h-screen flex flex-col lg:flex-row">
         {/* Left side - Login form */}
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-md w-full"
           >
-            <div className="text-center mb-8">
-              <div className="icon-box bg-[var(--primary)]/10 border-[var(--primary)]/20 mx-auto mb-6">
-                <LayersIcon size={24} className="text-[var(--primary)]" isAnimating={true} />
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="icon-box bg-[var(--primary)]/10 border-[var(--primary)]/20 mx-auto mb-4 sm:mb-6">
+                <LayersIcon size={20} className="text-[var(--primary)] sm:hidden" isAnimating={true} />
+                <LayersIcon size={24} className="text-[var(--primary)] hidden sm:block" isAnimating={true} />
               </div>
-              <h1 className="text-2xl font-semibold mb-2">Welcome to Image to 3D</h1>
-              <p className="text-[var(--text-muted)]">
+              <h1 className="text-xl sm:text-2xl font-semibold mb-2">Welcome to Image to 3D</h1>
+              <p className="text-sm sm:text-base text-[var(--text-muted)]">
                 Sign in to transform your photos into interactive 3D scenes.
               </p>
             </div>
 
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-4 sm:p-6">
               <button
                 onClick={() => signIn("google")}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium"
+                className="w-full flex items-center justify-center gap-2.5 sm:gap-3 px-4 py-2.5 sm:py-3 bg-white text-gray-700 rounded-lg sm:rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium text-sm sm:text-base"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -181,23 +182,23 @@ export function AuthGate({ children }: AuthGateProps) {
                 Continue with Google
               </button>
 
-              <p className="text-xs text-[var(--text-muted)] text-center mt-4">
+              <p className="text-[10px] sm:text-xs text-[var(--text-muted)] text-center mt-3 sm:mt-4">
                 By signing in, you agree to our terms of service and privacy policy.
               </p>
             </div>
 
-            <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
-                <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
-                <div className="text-xs text-[var(--text-muted)]">Free scenes</div>
+            <div className="mt-6 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4 text-center">
+              <div className='h-[70px] sm:h-[100px] space-between flex flex-col items-center justify-center'>
+                <div className="text-xl sm:text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
+                <div className="text-[10px] sm:text-xs text-[var(--text-muted)]">Free scenes</div>
               </div>
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
-                <div className="text-2xl font-bold text-[var(--primary)] opacity-30">∞</div>
-                <div className="text-xs text-[var(--text-muted)]">With upgrade</div>
+              <div className='h-[70px] sm:h-[100px] space-between flex flex-col items-center justify-center'>
+                <div className="text-xl sm:text-2xl font-bold text-[var(--primary)] opacity-30">∞</div>
+                <div className="text-[10px] sm:text-xs text-[var(--text-muted)]">With upgrade</div>
               </div>
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
-                <Sparkles className="size-5 mb-2 text-[var(--primary)] opacity-30" />
-                <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
+              <div className='h-[70px] sm:h-[100px] space-between flex flex-col items-center justify-center'>
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-[var(--primary)] opacity-30" />
+                <div className="text-[10px] sm:text-xs text-[var(--text-muted)]">AI-powered</div>
               </div>
             </div>
           </motion.div>
