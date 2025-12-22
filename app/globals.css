@@ -5,7 +5,7 @@
 
 :root {
   /* Family/ConnectKit-inspired warm theme */
-  --accent: oklch(0.97 0 0);
+  --accent: #1A1A1A;
   --accent-hover: #2D2D2D;
   --surface: #FFFFFF;
   --surface-elevated: #F5F5F4;

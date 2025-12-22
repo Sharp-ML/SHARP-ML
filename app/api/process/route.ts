@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import Replicate from "replicate";
 
 // Route segment config for App Router
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes for model inference
 
 // Generate unique filename
 function generateId(): string {
@@ -30,18 +29,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for required environment variables
-    const replicateToken = process.env.REPLICATE_API_TOKEN;
+    const modalEndpointUrl = process.env.MODAL_ENDPOINT_URL;
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     
-    if (!replicateToken) {
+    if (!modalEndpointUrl) {
       return NextResponse.json(
         {
           error: "Server configuration error",
-          message: "REPLICATE_API_TOKEN is not configured. Please add it to your environment variables.",
+          message: "MODAL_ENDPOINT_URL is not configured. Please deploy the Sharp model to Modal and add the endpoint URL.",
           setup: {
-            step1: "Get your API token from https://replicate.com/account/api-tokens",
-            step2: "Add REPLICATE_API_TOKEN to your Vercel environment variables",
-            step3: "Redeploy your application",
+            step1: "Install Modal CLI: pip install modal",
+            step2: "Authenticate: modal token new",
+            step3: "Deploy: cd modal && modal deploy sharp_api.py",
+            step4: "Copy the web endpoint URL and add as MODAL_ENDPOINT_URL",
+            step5: "Redeploy your application",
           },
         },
         { status: 500 }
@@ -69,90 +70,114 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split(".").pop() || "jpg";
     const inputFileName = `uploads/${id}.${ext}`;
 
-    // Upload to Vercel Blob
+    // Upload input image to Vercel Blob
     const blob = await put(inputFileName, file, {
       access: "public",
     });
 
     const imageUrl = blob.url;
 
-    // Initialize Replicate client
-    const replicate = new Replicate({
-      auth: replicateToken,
+    // Convert image to base64 for the Modal API call
+    const imageBuffer = await file.arrayBuffer();
+    const imageBase64 = Buffer.from(imageBuffer).toString("base64");
+
+    // Call the Apple Sharp model via Modal endpoint
+    // The model generates 3D Gaussian splats (PLY format) from a single image
+    console.log("Calling Modal endpoint for Sharp inference...");
+    
+    const response = await fetch(modalEndpointUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        image: imageBase64,
+      }),
     });
 
-    // Run TripoSR model for image-to-3D conversion
-    // This model generates a 3D mesh from a single image
-    const output = await replicate.run(
-      "camenduru/tripo-sr:be24b3cc30b7b8004fb41a0b73bee94ea9a1a4d90a7f8fa1df8ee0c5d4dc4c45",
-      {
-        input: {
-          image: imageUrl,
-          mc_resolution: 256,
-          foreground_ratio: 0.85,
-        },
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Modal endpoint error:", errorText);
+      
+      if (response.status === 503 || response.status === 502) {
+        return NextResponse.json(
+          { 
+            error: "Model is loading", 
+            details: "The Sharp model container is warming up. Please try again in 30-60 seconds.",
+          },
+          { status: 503 }
+        );
       }
-    );
-
-    // The output is a URL to the generated 3D model
-    // Replicate returns different formats depending on the model
-    let modelUrl: string | null = null;
-    if (typeof output === "string") {
-      modelUrl = output;
-    } else if (Array.isArray(output) && output.length > 0) {
-      modelUrl = String(output[0]);
-    } else if (output && typeof output === "object" && "mesh" in output) {
-      modelUrl = String((output as { mesh: string }).mesh);
+      
+      return NextResponse.json(
+        { error: "3D generation failed", details: errorText },
+        { status: response.status }
+      );
     }
 
-    if (!modelUrl) {
+    const result = await response.json();
+    
+    if (!result.success) {
+      console.error("Sharp generation failed:", result.error);
       return NextResponse.json(
-        { error: "3D generation failed - no output received" },
+        { error: "3D generation failed", details: result.error },
         { status: 500 }
       );
     }
 
-    // Download the generated model and upload to Vercel Blob for permanent storage
-    const modelResponse = await fetch(modelUrl);
-    if (!modelResponse.ok) {
+    // Decode the PLY data from base64
+    const plyBase64 = result.ply_base64;
+    if (!plyBase64) {
       return NextResponse.json(
-        { error: "Failed to download generated 3D model" },
+        { error: "3D generation failed - no PLY data received" },
         { status: 500 }
       );
     }
 
-    const modelBuffer = await modelResponse.arrayBuffer();
-    const modelFileName = `outputs/${id}.glb`;
+    const plyBuffer = Buffer.from(plyBase64, "base64");
 
-    const modelBlob = await put(modelFileName, new Blob([modelBuffer]), {
+    // Upload the PLY file to Vercel Blob for permanent storage
+    const modelFileName = `outputs/${id}.ply`;
+
+    const modelBlob = await put(modelFileName, new Blob([plyBuffer]), {
       access: "public",
-      contentType: "model/gltf-binary",
+      contentType: "application/x-ply",
     });
+
+    console.log("Successfully generated 3D Gaussian splats:", modelBlob.url);
 
     return NextResponse.json({
       success: true,
       modelUrl: modelBlob.url,
       imageUrl: imageUrl,
-      modelType: "glb",
-      message: "3D model generated successfully",
+      modelType: "ply",
+      message: "3D Gaussian splats generated successfully using Apple Sharp",
     });
   } catch (error) {
     console.error("Processing error:", error);
 
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    // Handle specific Replicate errors
+    // Handle specific errors
     if (error instanceof Error) {
-      if (error.message.includes("authentication") || error.message.includes("Unauthorized")) {
+      if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
         return NextResponse.json(
-          { error: "Invalid Replicate API token", details: errorMessage },
-          { status: 401 }
+          { 
+            error: "Cannot connect to Modal endpoint", 
+            details: "The Modal endpoint may be down or the URL is incorrect.",
+            hint: "Check that your MODAL_ENDPOINT_URL is correct and the Modal app is deployed."
+          },
+          { status: 503 }
         );
       }
-      if (error.message.includes("rate limit")) {
+      if (error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
         return NextResponse.json(
-          { error: "Rate limit exceeded. Please try again later.", details: errorMessage },
-          { status: 429 }
+          { 
+            error: "Request timeout", 
+            details: "The Sharp model took too long to respond. This may happen on first request when the container is cold.",
+            hint: "Try again - subsequent requests should be faster."
+          },
+          { status: 504 }
         );
       }
       // Handle Vercel Blob errors
@@ -182,13 +207,21 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Image to 3D Processing API",
+    message: "Apple Sharp - Image to 3D Gaussian Splats API",
+    model: "apple/Sharp (via Modal)",
     endpoints: {
-      POST: "Upload an image to convert to 3D",
+      POST: "Upload an image to convert to 3D Gaussian splats",
     },
     requirements: {
-      REPLICATE_API_TOKEN: "Required - Get from https://replicate.com/account/api-tokens",
+      MODAL_ENDPOINT_URL: "Required - Your deployed Modal endpoint URL",
       BLOB_READ_WRITE_TOKEN: "Required for Vercel Blob storage",
+    },
+    setup: {
+      step1: "Install Modal CLI: pip install modal",
+      step2: "Authenticate: modal token new",
+      step3: "Deploy: cd modal && modal deploy sharp_api.py",
+      step4: "Copy the web endpoint URL (ends with /generate)",
+      step5: "Add MODAL_ENDPOINT_URL to your environment variables",
     },
   });
 }

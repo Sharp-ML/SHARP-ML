@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "functions": {
     "app/api/process/route.ts": {
-      "maxDuration": 60,
+      "maxDuration": 300,
       "memory": 1024
     }
   },

@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@huggingface/inference": "^4.13.5",
     "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "@types/three": "^0.182.0",
     "@vercel/blob": "^2.0.0",
