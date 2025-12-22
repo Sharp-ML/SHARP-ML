@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Share2,
   Check,
-  ImagePlus,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
@@ -841,15 +840,15 @@ function HomeContent() {
               >
                 {/* Viewer header */}
                 <div className="mb-6">
-                  <button
-                    onClick={handleReset}
-                    className="icon-btn mb-4 -ml-2"
-                    aria-label="Back to home"
-                  >
-                    <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-                  </button>
                   <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                    <button
+                      onClick={handleReset}
+                      className="icon-btn flex-shrink-0"
+                      aria-label="Back to home"
+                    >
+                      <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+                    </button>
                     <h2 className="text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
@@ -871,13 +870,6 @@ function HomeContent() {
                           <span>Share</span>
                         </>
                       )}
-                    </button>
-                    <button
-                      onClick={handleReset}
-                      className="icon-btn"
-                      aria-label="New image"
-                    >
-                      <ImagePlus className="w-4 h-4" strokeWidth={2} />
                     </button>
                   </div>
                 </div>
