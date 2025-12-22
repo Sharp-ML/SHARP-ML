@@ -18,6 +18,7 @@ import base64
 import tempfile
 import os
 from pathlib import Path
+import requests as http_requests
 
 # Create the Modal app
 app = modal.App("apple-sharp")
@@ -25,7 +26,6 @@ app = modal.App("apple-sharp")
 # Define the container image with all dependencies
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
-    .env({"IMAGE_VERSION": "2"})  # Force rebuild when dependencies change
     .apt_install(
         "git",
         "wget",
@@ -46,7 +46,6 @@ sharp_image = (
         "timm",
         "huggingface_hub",
         "fastapi",
-        "requests",
     )
     .run_commands(
         # Clone the Sharp repository
@@ -54,6 +53,8 @@ sharp_image = (
         # Install Sharp package
         "cd /opt/ml-sharp && pip install -e .",
     )
+    # Install requests AFTER Sharp to ensure it's not overwritten
+    .pip_install("requests")
 )
 
 # Volume to cache the model weights
@@ -178,8 +179,6 @@ class SharpModel:
                 "message": "3D Gaussian splats generated successfully"
             }
         """
-        import requests as http_requests
-        
         try:
             # Get image data from request
             image_bytes = None
