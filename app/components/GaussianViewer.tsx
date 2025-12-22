@@ -44,6 +44,7 @@ export default function GaussianViewer({
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("scene");
   const videoAnimationRef = useRef<{ startTime: number; active: boolean }>({ startTime: 0, active: false });
+  const keysPressed = useRef<Set<string>>(new Set());
 
   // Debug overrides
   const isLoading = debugLoading !== undefined 
@@ -119,13 +120,28 @@ export default function GaussianViewer({
         camera.up.set(0, -1, 0);
         camera.lookAt(0, 0, 0);
 
-        // Create controls for scene mode
+        // Create controls for scene mode with improved settings
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
+        controls.dampingFactor = 0.1; // Smoother damping
+        controls.rotateSpeed = 0.8; // Slightly slower for precision
         controls.enableZoom = true;
+        controls.zoomSpeed = 1.2;
+        controls.minDistance = 0.5; // Prevent zooming too close
+        controls.maxDistance = 10; // Prevent zooming too far
+        controls.enablePan = true; // Enable panning with right-click or shift+drag
+        controls.panSpeed = 0.8;
+        controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
         controls.autoRotate = false;
         controls.target.set(0, 0, 0);
+        // Limit vertical rotation to prevent disorientation
+        controls.minPolarAngle = 0.1; // Prevent going fully overhead
+        controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
+        // Enable touch controls
+        controls.touches = {
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        };
         controlsRef.current = controls;
 
         // Create viewer with our renderer and camera, manual mode
@@ -165,25 +181,72 @@ export default function GaussianViewer({
           // Check if we're in video mode
           if (videoAnimationRef.current.active) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+
+            // Subtle drift movement - stays in center zone to avoid showing edges
+            // Very slow, gentle movements that create visual interest without revealing edges
+            const driftSpeed = 0.05; // Very slow drift
+            const driftAmount = 0.15; // Small movement range
+            const baseDistance = 1.2; // Close to subject
             
-            // Cinematic camera movement for Gaussian splats
-            // Closer orbit to fill frame and hide edge artifacts
-            const orbitSpeed = 0.12;
-            const orbitRadius = 1.8; // Much closer to fill the frame
-            const verticalOscillation = 0.15; // Reduced to keep content centered
-            const verticalSpeed = 0.08;
-            
-            const angle = elapsed * orbitSpeed;
-            const x = Math.sin(angle) * orbitRadius;
-            const z = -Math.cos(angle) * orbitRadius; // Negative because camera starts at -z
-            const y = Math.sin(elapsed * verticalSpeed) * verticalOscillation;
-            
+            // Use different frequencies for x/y to create organic Lissajous-like pattern
+            const x = Math.sin(elapsed * driftSpeed) * driftAmount;
+            const y = Math.sin(elapsed * driftSpeed * 0.7) * driftAmount * 0.5;
+            const z = -baseDistance + Math.sin(elapsed * driftSpeed * 0.5) * 0.1;
+
             camera.position.set(x, y, z);
             camera.lookAt(0, 0, 0);
-            
+
             controls.enabled = false;
           } else {
             controls.enabled = true;
+            
+            // Apply WASD keyboard controls
+            const keys = keysPressed.current;
+            const moveSpeed = 0.03;
+            const rotateSpeed = 0.02;
+            
+            if (keys.size > 0) {
+              // Get camera's forward and right vectors
+              const forward = new THREE.Vector3();
+              camera.getWorldDirection(forward);
+              const right = new THREE.Vector3();
+              right.crossVectors(forward, camera.up).normalize();
+              
+              // W/S - move forward/backward (dolly)
+              if (keys.has('w')) {
+                camera.position.addScaledVector(forward, moveSpeed);
+                controls.target.addScaledVector(forward, moveSpeed);
+              }
+              if (keys.has('s')) {
+                camera.position.addScaledVector(forward, -moveSpeed);
+                controls.target.addScaledVector(forward, -moveSpeed);
+              }
+              
+              // A/D - rotate around target (orbit left/right)
+              if (keys.has('a')) {
+                const angle = rotateSpeed;
+                const offset = camera.position.clone().sub(controls.target);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                camera.position.copy(controls.target).add(offset);
+              }
+              if (keys.has('d')) {
+                const angle = -rotateSpeed;
+                const offset = camera.position.clone().sub(controls.target);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                camera.position.copy(controls.target).add(offset);
+              }
+              
+              // Q/E - move up/down
+              if (keys.has('q')) {
+                camera.position.y -= moveSpeed;
+                controls.target.y -= moveSpeed;
+              }
+              if (keys.has('e')) {
+                camera.position.y += moveSpeed;
+                controls.target.y += moveSpeed;
+              }
+            }
+            
             controls.update();
           }
           
@@ -238,13 +301,28 @@ export default function GaussianViewer({
       container.appendChild(renderer.domElement);
       rendererRef.current = renderer;
 
-      // Create controls
+      // Create controls with improved settings for easier navigation
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
+      controls.dampingFactor = 0.1; // Smoother damping
+      controls.rotateSpeed = 0.8; // Slightly slower for precision
       controls.enableZoom = true;
-      controls.autoRotate = false; // Disabled - user controls the view
+      controls.zoomSpeed = 1.2;
+      controls.minDistance = 0.5; // Prevent zooming too close
+      controls.maxDistance = 15; // Prevent zooming too far
+      controls.enablePan = true; // Enable panning with right-click or shift+drag
+      controls.panSpeed = 0.8;
+      controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
+      controls.autoRotate = false;
       controls.autoRotateSpeed = 1.0;
+      // Limit vertical rotation to prevent disorientation
+      controls.minPolarAngle = 0.1; // Prevent going fully overhead
+      controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
+      // Enable touch controls
+      controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN,
+      };
       controlsRef.current = controls;
 
       // Add lights
@@ -324,27 +402,73 @@ export default function GaussianViewer({
         // Check if we're in video mode
         if (videoAnimationRef.current.active) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+
+          // Subtle drift movement - stays in center zone to avoid showing edges
+          // Very slow, gentle movements that create visual interest without revealing edges
+          const driftSpeed = 0.05; // Very slow drift
+          const driftAmount = 0.15; // Small movement range
+          const baseDistance = 1.5; // Close to subject
           
-          // Cinematic camera movement
-          // Closer orbit to fill frame and hide edge artifacts
-          const orbitSpeed = 0.12; // Slow, cinematic rotation
-          const orbitRadius = 2.2; // Closer to fill the frame
-          const verticalOscillation = 0.15; // Reduced to keep content centered
-          const verticalSpeed = 0.08; // Speed of vertical oscillation
-          
-          // Calculate camera position on an orbit path
-          const angle = elapsed * orbitSpeed;
-          const x = Math.sin(angle) * orbitRadius;
-          const z = Math.cos(angle) * orbitRadius;
-          const y = 0.8 + Math.sin(elapsed * verticalSpeed) * verticalOscillation;
-          
+          // Use different frequencies for x/y to create organic Lissajous-like pattern
+          const x = Math.sin(elapsed * driftSpeed) * driftAmount;
+          const y = 0.8 + Math.sin(elapsed * driftSpeed * 0.7) * driftAmount * 0.5;
+          const z = baseDistance + Math.sin(elapsed * driftSpeed * 0.5) * 0.1;
+
           camera.position.set(x, y, z);
           camera.lookAt(0, 0, 0);
-          
+
           // Disable controls in video mode
           controls.enabled = false;
         } else {
           controls.enabled = true;
+          
+          // Apply WASD keyboard controls
+          const keys = keysPressed.current;
+          const moveSpeed = 0.05;
+          const rotateSpeed = 0.02;
+          
+          if (keys.size > 0) {
+            // Get camera's forward and right vectors
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            const right = new THREE.Vector3();
+            right.crossVectors(forward, camera.up).normalize();
+            
+            // W/S - move forward/backward (dolly)
+            if (keys.has('w')) {
+              camera.position.addScaledVector(forward, moveSpeed);
+              controls.target.addScaledVector(forward, moveSpeed);
+            }
+            if (keys.has('s')) {
+              camera.position.addScaledVector(forward, -moveSpeed);
+              controls.target.addScaledVector(forward, -moveSpeed);
+            }
+            
+            // A/D - rotate around target (orbit left/right)
+            if (keys.has('a')) {
+              const angle = rotateSpeed;
+              const offset = camera.position.clone().sub(controls.target);
+              offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+              camera.position.copy(controls.target).add(offset);
+            }
+            if (keys.has('d')) {
+              const angle = -rotateSpeed;
+              const offset = camera.position.clone().sub(controls.target);
+              offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+              camera.position.copy(controls.target).add(offset);
+            }
+            
+            // Q/E - move up/down
+            if (keys.has('q')) {
+              camera.position.y -= moveSpeed;
+              controls.target.y -= moveSpeed;
+            }
+            if (keys.has('e')) {
+              camera.position.y += moveSpeed;
+              controls.target.y += moveSpeed;
+            }
+          }
+          
           controls.update();
         }
         
@@ -492,6 +616,38 @@ export default function GaussianViewer({
     }
   }, [viewMode]);
 
+  // WASD keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle WASD when not typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key)) {
+        keysPressed.current.add(key);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      keysPressed.current.delete(key);
+    };
+
+    // Clear keys when window loses focus
+    const handleBlur = () => {
+      keysPressed.current.clear();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
   return (
     <>
       {/* Backdrop when expanded */}
@@ -524,10 +680,10 @@ export default function GaussianViewer({
           }`}
         >
           {/* Viewer container - scales up in video mode to crop edge artifacts */}
-          <div 
-            ref={containerRef} 
+          <div
+            ref={containerRef}
             className={`absolute inset-0 transition-transform duration-500 ${
-              viewMode === "video" ? "scale-[1.15]" : "scale-100"
+              viewMode === "video" ? "scale-[2.5]" : "scale-100"
             }`}
           />
 
@@ -540,16 +696,6 @@ export default function GaussianViewer({
                 isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
               }`}
             >
-              <div className="relative mb-6">
-                <div className={`w-16 h-16 rounded-full border-2 spin-slow ${
-                  isExpanded 
-                    ? "border-white/20 border-t-white" 
-                    : "border-[var(--border)] border-t-[var(--accent)]"
-                }`} />
-                <Move3D className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
-                  isExpanded ? "text-white" : "text-[var(--accent)]"
-                }`} />
-              </div>
               <p className={`text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}>
                 Loading 3D Scene
               </p>
@@ -650,7 +796,7 @@ export default function GaussianViewer({
                     transition={{ duration: 0.2 }}
                     className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
                   >
-                    <div className={`rounded-xl px-4 py-3 flex items-center gap-4 text-xs ${
+                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
                       isExpanded
                         ? "text-white/60 bg-white/10 backdrop-blur-sm border border-white/20"
                         : "glass text-[var(--text-muted)]"

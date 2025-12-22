@@ -21,6 +21,7 @@ interface Stage {
   label: string;
   labelComplete: string;
   description: string;
+  descriptionComplete: string;
 }
 
 const stages: Stage[] = [
@@ -29,24 +30,28 @@ const stages: Stage[] = [
     label: "Uploading Image",
     labelComplete: "Uploaded",
     description: "Transferring your image to the server",
+    descriptionComplete: "Transferred your image to the server",
   },
   {
     id: "processing",
     label: "Analyzing Scene",
     labelComplete: "Analyzed",
     description: "Running neural network inference",
+    descriptionComplete: "Neural network inference complete",
   },
   {
     id: "generating",
     label: "Generating 3D Gaussians",
     labelComplete: "Generated",
     description: "Creating photorealistic 3D representation",
+    descriptionComplete: "Created photorealistic 3D representation",
   },
   {
     id: "complete",
     label: "Complete",
     labelComplete: "Complete",
     description: "Your 3D scene is ready to explore",
+    descriptionComplete: "Your 3D scene is ready to explore",
   },
 ];
 
@@ -158,7 +163,7 @@ function StageRow({
         </p>
         {(isCurrent || isComplete) && (
           <p className="text-sm text-[var(--text-muted)] truncate">
-            {stage.description}
+            {isComplete ? stage.descriptionComplete : stage.description}
           </p>
         )}
         {/* Stage progress bar for processing stage */}

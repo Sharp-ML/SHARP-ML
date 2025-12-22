@@ -338,6 +338,7 @@ function HomeContent() {
 
   // Debug controls - only show in development
   const isDev = process.env.NODE_ENV === "development";
+  const [debugPanelHidden, setDebugPanelHidden] = useState(false);
   
   // Debug state for 3D viewer
   const [viewerDebugLoading, setViewerDebugLoading] = useState<boolean | number | undefined>(undefined);
@@ -403,10 +404,22 @@ function HomeContent() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Debug Panel - Development Only */}
-      {isDev && (
+      {isDev && !debugPanelHidden && (
         <div className="fixed bottom-4 right-4 z-50 bg-black/90 text-white p-4 rounded-xl shadow-2xl text-xs max-w-xs">
-          <div className="font-bold mb-3 text-[10px] uppercase tracking-wider opacity-60">
-            Debug States
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold text-[10px] uppercase tracking-wider opacity-60">
+              Debug States
+            </div>
+            <button
+              onClick={() => setDebugPanelHidden(true)}
+              className="p-1 rounded hover:bg-white/20 opacity-60 hover:opacity-100 transition-opacity"
+              title="Hide until reload"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button
