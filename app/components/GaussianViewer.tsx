@@ -127,26 +127,26 @@ export default function GaussianViewer({
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.1; // Smoother damping
-        controls.rotateSpeed = 0.8; // Slightly slower for precision
-        controls.enableZoom = !mini;
+        controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
+        controls.enableZoom = !mini; // Disable zoom in mini mode
         controls.zoomSpeed = 1.2;
         controls.minDistance = 0.5; // Prevent zooming too close
         controls.maxDistance = 10; // Prevent zooming too far
         controls.enablePan = !mini; // Disable panning in mini mode
         controls.panSpeed = 0.8;
         controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
-        controls.autoRotate = mini; // Auto-rotate in mini mode
-        controls.autoRotateSpeed = 4.0; // Faster rotation for mini preview
+        controls.autoRotate = mini; // Auto-rotate in mini mode (stops when user interacts)
+        controls.autoRotateSpeed = 2.0; // Gentle rotation for mini preview
         controls.target.set(0, 0, 0);
         // Limit vertical rotation to prevent disorientation
         controls.minPolarAngle = 0.1; // Prevent going fully overhead
         controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
-        // Enable touch controls (disabled in mini mode)
-        controls.touches = mini ? { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.ROTATE } : {
+        // Enable touch controls
+        controls.touches = {
           ONE: THREE.TOUCH.ROTATE,
-          TWO: THREE.TOUCH.DOLLY_PAN,
+          TWO: mini ? THREE.TOUCH.ROTATE : THREE.TOUCH.DOLLY_PAN,
         };
-        controls.enabled = !mini; // Disable manual controls in mini mode
+        controls.enabled = true; // Always enable controls for interaction
         controlsRef.current = controls;
 
         // Create viewer with our renderer and camera, manual mode
@@ -183,7 +183,7 @@ export default function GaussianViewer({
           if (disposed) return;
           animationFrameId = requestAnimationFrame(animate);
           
-          // Check if we're in video mode
+          // Check if we're in video mode (not applicable in mini mode)
           if (videoAnimationRef.current.active && !mini) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
@@ -209,7 +209,7 @@ export default function GaussianViewer({
           } else if (!mini) {
             controls.enabled = true;
             
-            // Apply WASD keyboard controls
+            // Apply WASD keyboard controls (not in mini mode)
             const keys = keysPressed.current;
             const moveSpeed = 0.03;
             const rotateSpeed = 0.02;
@@ -256,8 +256,9 @@ export default function GaussianViewer({
               }
             }
           }
+          // In mini mode, controls stay enabled for drag-to-rotate interaction
           
-          // Always update controls (for autoRotate in mini mode)
+          // Always update controls (for autoRotate and damping)
           controls.update();
           
           // Update and render the Gaussian splats
@@ -315,25 +316,25 @@ export default function GaussianViewer({
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.1; // Smoother damping
-      controls.rotateSpeed = 0.8; // Slightly slower for precision
-      controls.enableZoom = !mini;
+      controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
+      controls.enableZoom = !mini; // Disable zoom in mini mode
       controls.zoomSpeed = 1.2;
       controls.minDistance = 0.5; // Prevent zooming too close
       controls.maxDistance = 15; // Prevent zooming too far
       controls.enablePan = !mini; // Disable panning in mini mode
       controls.panSpeed = 0.8;
       controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
-      controls.autoRotate = mini; // Auto-rotate in mini mode
-      controls.autoRotateSpeed = 4.0; // Faster rotation for mini preview
+      controls.autoRotate = mini; // Auto-rotate in mini mode (stops when user interacts)
+      controls.autoRotateSpeed = 2.0; // Gentle rotation for mini preview
       // Limit vertical rotation to prevent disorientation
       controls.minPolarAngle = 0.1; // Prevent going fully overhead
       controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
-      // Enable touch controls (disabled in mini mode)
-      controls.touches = mini ? { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.ROTATE } : {
+      // Enable touch controls
+      controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.DOLLY_PAN,
+        TWO: mini ? THREE.TOUCH.ROTATE : THREE.TOUCH.DOLLY_PAN,
       };
-      controls.enabled = !mini; // Disable manual controls in mini mode
+      controls.enabled = true; // Always enable controls for interaction
       controlsRef.current = controls;
 
       // Add lights
@@ -410,7 +411,7 @@ export default function GaussianViewer({
         if (disposed) return;
         animationFrameId = requestAnimationFrame(animate);
         
-        // Check if we're in video mode
+        // Check if we're in video mode (not applicable in mini mode)
         if (videoAnimationRef.current.active && !mini) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
@@ -437,7 +438,7 @@ export default function GaussianViewer({
         } else if (!mini) {
           controls.enabled = true;
           
-          // Apply WASD keyboard controls
+          // Apply WASD keyboard controls (not in mini mode)
           const keys = keysPressed.current;
           const moveSpeed = 0.05;
           const rotateSpeed = 0.02;
@@ -484,8 +485,9 @@ export default function GaussianViewer({
             }
           }
         }
+        // In mini mode, controls stay enabled for drag-to-rotate interaction
         
-        // Always update controls (for autoRotate in mini mode)
+        // Always update controls (for autoRotate and damping)
         controls.update();
         
         renderer.render(scene, camera);

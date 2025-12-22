@@ -738,7 +738,11 @@ function HomeContent() {
                               />
                               {/* Interactive 3D preview on hover */}
                               {hoveredSceneId === scene.id && (
-                                <div className="absolute inset-0">
+                                <div 
+                                  className="absolute inset-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                >
                                   <GaussianViewer
                                     modelUrl={scene.modelUrl}
                                     modelType={scene.modelType}
