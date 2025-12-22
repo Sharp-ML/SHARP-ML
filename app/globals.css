@@ -307,6 +307,29 @@ body {
   height: 100% !important;
 }
 
+/* Fullscreen mode */
+.scene-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  background: #1a1a1a;
+}
+
+/* Expanded modal mode */
+.scene-container.expanded {
+  position: fixed !important;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  width: auto;
+  height: auto;
+  border-radius: 24px;
+  border: none;
+  background: #1a1a1a;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
 /* Status indicator */
 .status-dot {
   width: 8px;

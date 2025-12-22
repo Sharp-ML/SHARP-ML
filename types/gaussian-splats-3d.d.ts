@@ -1,4 +1,6 @@
 declare module "@mkkellogg/gaussian-splats-3d" {
+  import * as THREE from "three";
+
   export enum SceneRevealMode {
     Instant = 0,
     Gradual = 1,
@@ -14,6 +16,11 @@ declare module "@mkkellogg/gaussian-splats-3d" {
     sceneRevealMode?: SceneRevealMode;
     antialiased?: boolean;
     focalAdjustment?: number;
+    // Custom renderer and camera support
+    renderer?: THREE.WebGLRenderer;
+    camera?: THREE.PerspectiveCamera;
+    selfDrivenMode?: boolean;
+    useBuiltInControls?: boolean;
   }
 
   export interface SplatSceneOptions {
@@ -27,6 +34,9 @@ declare module "@mkkellogg/gaussian-splats-3d" {
     constructor(options: ViewerOptions);
     addSplatScene(url: string, options?: SplatSceneOptions): Promise<void>;
     start(): void;
+    update(): void;
+    render(): void;
     dispose(): void;
+    scene: THREE.Scene;
   }
 }

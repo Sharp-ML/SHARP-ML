@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Maximize2,
   Download,
   Move3D,
   MousePointer2,
+  Video,
+  Box,
+  X,
 } from "lucide-react";
+import { LayersIcon } from "@/components/ui/layers";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+type ViewMode = "scene" | "video";
 
 interface GaussianViewerProps {
   modelUrl: string;
@@ -27,13 +33,17 @@ export default function GaussianViewer({
   debugLoading,
   debugError,
 }: GaussianViewerProps) {
+  const sceneContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const [isLoadingInternal, setIsLoading] = useState(true);
   const [loadProgressInternal, setLoadProgress] = useState(0);
   const [errorInternal, setError] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("scene");
+  const videoAnimationRef = useRef<{ startTime: number; active: boolean }>({ startTime: 0, active: false });
 
   // Debug overrides
   const isLoading = debugLoading !== undefined 
@@ -87,13 +97,43 @@ export default function GaussianViewer({
       try {
         const GaussianSplats3D = await import("@mkkellogg/gaussian-splats-3d");
 
-        if (disposed) return;
+        if (disposed || !containerRef.current) return;
 
+        const container = containerRef.current;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        // Create our own renderer for camera control
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+
+        // Create camera
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+        camera.position.set(0, 0, -3);
+        camera.up.set(0, -1, 0);
+        camera.lookAt(0, 0, 0);
+
+        // Create controls for scene mode
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        controls.autoRotate = false;
+        controls.target.set(0, 0, 0);
+        controlsRef.current = controls;
+
+        // Create viewer with our renderer and camera, manual mode
         const viewer = new GaussianSplats3D.Viewer({
-          cameraUp: [0, -1, 0],
-          initialCameraPosition: [0, 0, -3],
-          initialCameraLookAt: [0, 0, 0],
-          rootElement: containerRef.current,
+          renderer: renderer,
+          camera: camera,
+          selfDrivenMode: false,
+          useBuiltInControls: false,
           sharedMemoryForWorkers: false,
           dynamicScene: false,
           sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
@@ -101,25 +141,69 @@ export default function GaussianViewer({
           focalAdjustment: 1.0,
         });
 
-        viewerRef.current = viewer;
+        viewerRef.current = { viewer, camera, renderer, controls };
 
-        await (
-          viewer as {
-            addSplatScene: (url: string, options: object) => Promise<void>;
-          }
-        ).addSplatScene(modelUrl, {
+        await viewer.addSplatScene(modelUrl, {
           splatAlphaRemovalThreshold: 5,
           showLoadingUI: false,
           progressiveLoad: true,
           onProgress: (progress: number) => {
-            setLoadProgress(Math.round(progress * 100));
+            // Progress is already 0-100, clamp to ensure valid percentage
+            setLoadProgress(Math.min(100, Math.round(progress)));
           },
         });
 
         if (disposed) return;
 
-        (viewer as { start: () => void }).start();
         setIsLoading(false);
+
+        // Animation loop with video mode support
+        const animate = () => {
+          if (disposed) return;
+          animationFrameId = requestAnimationFrame(animate);
+          
+          // Check if we're in video mode
+          if (videoAnimationRef.current.active) {
+            const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+            
+            // Cinematic camera movement for Gaussian splats
+            // Closer orbit to fill frame and hide edge artifacts
+            const orbitSpeed = 0.12;
+            const orbitRadius = 1.8; // Much closer to fill the frame
+            const verticalOscillation = 0.15; // Reduced to keep content centered
+            const verticalSpeed = 0.08;
+            
+            const angle = elapsed * orbitSpeed;
+            const x = Math.sin(angle) * orbitRadius;
+            const z = -Math.cos(angle) * orbitRadius; // Negative because camera starts at -z
+            const y = Math.sin(elapsed * verticalSpeed) * verticalOscillation;
+            
+            camera.position.set(x, y, z);
+            camera.lookAt(0, 0, 0);
+            
+            controls.enabled = false;
+          } else {
+            controls.enabled = true;
+            controls.update();
+          }
+          
+          // Update and render the Gaussian splats
+          viewer.update();
+          viewer.render();
+        };
+        animate();
+
+        // Handle resize
+        const handleResize = () => {
+          if (!containerRef.current || disposed) return;
+          const newWidth = containerRef.current.clientWidth;
+          const newHeight = containerRef.current.clientHeight;
+          camera.aspect = newWidth / newHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(newWidth, newHeight);
+        };
+
+        window.addEventListener("resize", handleResize);
       } catch (err) {
         throw err;
       }
@@ -159,8 +243,9 @@ export default function GaussianViewer({
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
       controls.enableZoom = true;
-      controls.autoRotate = true;
+      controls.autoRotate = false; // Disabled - user controls the view
       controls.autoRotateSpeed = 1.0;
+      controlsRef.current = controls;
 
       // Add lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -231,11 +316,38 @@ export default function GaussianViewer({
         }
       );
 
-      // Animation loop
+      // Animation loop with video mode support
       const animate = () => {
         if (disposed) return;
         animationFrameId = requestAnimationFrame(animate);
-        controls.update();
+        
+        // Check if we're in video mode
+        if (videoAnimationRef.current.active) {
+          const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+          
+          // Cinematic camera movement
+          // Closer orbit to fill frame and hide edge artifacts
+          const orbitSpeed = 0.12; // Slow, cinematic rotation
+          const orbitRadius = 2.2; // Closer to fill the frame
+          const verticalOscillation = 0.15; // Reduced to keep content centered
+          const verticalSpeed = 0.08; // Speed of vertical oscillation
+          
+          // Calculate camera position on an orbit path
+          const angle = elapsed * orbitSpeed;
+          const x = Math.sin(angle) * orbitRadius;
+          const z = Math.cos(angle) * orbitRadius;
+          const y = 0.8 + Math.sin(elapsed * verticalSpeed) * verticalOscillation;
+          
+          camera.position.set(x, y, z);
+          camera.lookAt(0, 0, 0);
+          
+          // Disable controls in video mode
+          controls.enabled = false;
+        } else {
+          controls.enabled = true;
+          controls.update();
+        }
+        
         renderer.render(scene, camera);
       };
       animate();
@@ -262,13 +374,14 @@ export default function GaussianViewer({
         cancelAnimationFrame(animationFrameId);
       }
 
-      // Dispose Gaussian Splat viewer
-      if (
-        viewerRef.current &&
-        typeof (viewerRef.current as { dispose?: () => void }).dispose ===
-          "function"
-      ) {
-        (viewerRef.current as { dispose: () => void }).dispose();
+      // Dispose Gaussian Splat viewer (may be nested in object)
+      if (viewerRef.current) {
+        const viewerObj = viewerRef.current as { viewer?: { dispose: () => void }; dispose?: () => void };
+        if (viewerObj.viewer?.dispose) {
+          viewerObj.viewer.dispose();
+        } else if (viewerObj.dispose) {
+          viewerObj.dispose();
+        }
       }
 
       // Dispose Three.js renderer
@@ -276,21 +389,23 @@ export default function GaussianViewer({
         rendererRef.current.dispose();
       }
 
+      // Dispose controls
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
+
       viewerRef.current = null;
       rendererRef.current = null;
+      controlsRef.current = null;
     };
   }, [modelUrl, modelType]);
 
-  const handleFullscreen = () => {
-    if (!containerRef.current) return;
+  const handleExpand = () => {
+    setIsExpanded(true);
+  };
 
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
+  const handleCollapse = () => {
+    setIsExpanded(false);
   };
 
   const handleDownload = () => {
@@ -300,116 +415,324 @@ export default function GaussianViewer({
     link.click();
   };
 
+  // Handle resize when expanded/collapsed
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const handleResize = () => {
+      if (!containerRef.current || !rendererRef.current) return;
+      const newWidth = containerRef.current.clientWidth;
+      const newHeight = containerRef.current.clientHeight;
+
+      if (newWidth === 0 || newHeight === 0) return;
+
+      // Update renderer size
+      rendererRef.current.setSize(newWidth, newHeight);
+
+      // Update camera aspect ratio if we have a ThreeJS viewer
+      const viewer = viewerRef.current as { camera?: THREE.PerspectiveCamera } | null;
+      if (viewer?.camera) {
+        viewer.camera.aspect = newWidth / newHeight;
+        viewer.camera.updateProjectionMatrix();
+      }
     };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    // Trigger resize after delays to catch CSS transitions
+    const timeouts = [50, 100, 200, 300].map(delay => 
+      setTimeout(handleResize, delay)
+    );
+
+    // Also listen to window resize while expanded
+    if (isExpanded) {
+      window.addEventListener("resize", handleResize);
+    }
+
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      timeouts.forEach(clearTimeout);
+      window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [isExpanded]);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isExpanded]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isExpanded]);
+
+  // Handle view mode changes
+  useEffect(() => {
+    if (viewMode === "video") {
+      videoAnimationRef.current = { startTime: Date.now(), active: true };
+      // Disable controls when in video mode
+      if (controlsRef.current) {
+        controlsRef.current.enabled = false;
+      }
+    } else {
+      videoAnimationRef.current = { startTime: 0, active: false };
+      // Re-enable controls when in scene mode
+      if (controlsRef.current) {
+        controlsRef.current.enabled = true;
+      }
+    }
+  }, [viewMode]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="w-full"
-    >
-      <div className="scene-container relative aspect-[16/10] w-full">
-        {/* Viewer container */}
-        <div ref={containerRef} className="absolute inset-0" />
-
-        {/* Loading overlay */}
-        {isLoading && (
+    <>
+      {/* Backdrop when expanded */}
+      <AnimatePresence>
+        {isExpanded && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--surface)]/90 backdrop-blur-sm z-10"
-          >
-            <div className="relative mb-6">
-              <div className="w-16 h-16 rounded-full border-2 border-[var(--border)] border-t-[var(--accent)] spin-slow" />
-              <Move3D className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--accent)]" />
-            </div>
-            <p className="text-lg font-medium mb-2">Loading 3D Scene</p>
-            <div className="w-48 h-1.5 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-[var(--accent)] rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${loadProgress}%` }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-            <p className="text-sm text-[var(--text-muted)] mt-2">
-              {loadProgress}%
-            </p>
-          </motion.div>
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={handleCollapse}
+          />
         )}
+      </AnimatePresence>
 
-        {/* Error overlay */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--surface)]/90 backdrop-blur-sm z-10"
-          >
-            <p className="text-lg font-medium mb-2 text-red-400">
-              Error
-            </p>
-            <p className="text-sm text-[var(--text-muted)] text-center max-w-sm">
-              {error}
-            </p>
-          </motion.div>
-        )}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full"
+      >
+        {/* Scene container - becomes modal when expanded */}
+        <div
+          ref={sceneContainerRef}
+          className={`scene-container overflow-hidden ${
+            isExpanded
+              ? "expanded z-50"
+              : "relative w-full aspect-[16/10]"
+          }`}
+        >
+          {/* Viewer container - scales up in video mode to crop edge artifacts */}
+          <div 
+            ref={containerRef} 
+            className={`absolute inset-0 transition-transform duration-500 ${
+              viewMode === "video" ? "scale-[1.15]" : "scale-100"
+            }`}
+          />
 
-        {/* Controls overlay */}
-        {!isLoading && !error && (
-          <>
-            {/* Top right controls */}
-            <div className="absolute top-4 right-4 flex gap-2 z-20 pointer-events-auto">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFullscreen();
-                }}
-                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDownload();
-                }}
-                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
-                title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
-              >
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Bottom left instructions */}
-            <div className="absolute bottom-4 left-4 z-20">
-              <div className="glass rounded-xl px-4 py-3 flex items-center gap-4 text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1.5">
-                  <MousePointer2 className="w-3.5 h-3.5" />
-                  Drag to rotate
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Move3D className="w-3.5 h-3.5" />
-                  Scroll to zoom
-                </span>
+          {/* Loading overlay */}
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className={`absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm z-10 ${
+                isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
+              }`}
+            >
+              <div className="relative mb-6">
+                <div className={`w-16 h-16 rounded-full border-2 spin-slow ${
+                  isExpanded 
+                    ? "border-white/20 border-t-white" 
+                    : "border-[var(--border)] border-t-[var(--accent)]"
+                }`} />
+                <Move3D className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
+                  isExpanded ? "text-white" : "text-[var(--accent)]"
+                }`} />
               </div>
-            </div>
+              <p className={`text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}>
+                Loading 3D Scene
+              </p>
+              <div className={`w-48 h-1.5 rounded-full overflow-hidden ${
+                isExpanded ? "bg-white/10" : "bg-[var(--surface-elevated)]"
+              }`}>
+                <motion.div
+                  className={`h-full rounded-full ${isExpanded ? "bg-white" : "bg-[var(--accent)]"}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${loadProgress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              <p className={`text-sm mt-2 ${isExpanded ? "text-white/60" : "text-[var(--text-muted)]"}`}>
+                {loadProgress}%
+              </p>
+            </motion.div>
+          )}
 
-          </>
-        )}
-      </div>
-    </motion.div>
+          {/* Error overlay */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className={`absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm z-10 ${
+                isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
+              }`}
+            >
+              <p className="text-lg font-medium mb-2 text-red-400">Error</p>
+              <p className={`text-sm text-center max-w-sm ${
+                isExpanded ? "text-white/60" : "text-[var(--text-muted)]"
+              }`}>
+                {error}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Controls overlay */}
+          {!isLoading && !error && (
+            <>
+              {/* Top right controls */}
+              <div className={`absolute z-20 pointer-events-auto flex gap-2 ${
+                isExpanded ? "top-4 right-4" : "top-4 right-4"
+              }`}>
+                {/* Close button when expanded */}
+                {isExpanded && (
+                  <button
+                    type="button"
+                    onClick={handleCollapse}
+                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                )}
+                
+                {/* Expand button when not expanded */}
+                {!isExpanded && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExpand();
+                    }}
+                    className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Expand"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Download button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload();
+                  }}
+                  className={`flex items-center justify-center transition-all cursor-pointer ${
+                    isExpanded
+                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      : "p-2.5 rounded-xl glass hover:bg-white/10"
+                  }`}
+                  title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
+                >
+                  <Download className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                </button>
+              </div>
+
+              {/* Bottom left instructions / video indicator */}
+              <AnimatePresence mode="wait">
+                {viewMode === "scene" ? (
+                  <motion.div
+                    key="instructions"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
+                  >
+                    <div className={`rounded-xl px-4 py-3 flex items-center gap-4 text-xs ${
+                      isExpanded
+                        ? "text-white/60 bg-white/10 backdrop-blur-sm border border-white/20"
+                        : "glass text-[var(--text-muted)]"
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <MousePointer2 className="w-3.5 h-3.5" />
+                        Drag to rotate
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Move3D className="w-3.5 h-3.5" />
+                        Scroll to zoom
+                      </span>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="video-indicator"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
+                  >
+                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
+                      isExpanded
+                        ? "bg-white/10 backdrop-blur-sm border border-white/20"
+                        : "glass"
+                    }`}>
+                      <span className="flex items-center gap-2 text-red-400">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        Video Preview
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Bottom right Scene/Video toggle */}
+              <div className={`absolute z-20 ${isExpanded ? "bottom-6 right-6" : "bottom-4 right-4"}`}>
+                <div className={`rounded-xl p-1 flex items-center gap-1 ${
+                  isExpanded
+                    ? "bg-white/10 backdrop-blur-sm border border-white/20"
+                    : "glass"
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("scene")}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                      viewMode === "scene"
+                        ? isExpanded
+                          ? "bg-white text-black"
+                          : "bg-[var(--accent)] text-white"
+                        : isExpanded
+                          ? "text-white/60 hover:text-white hover:bg-white/10"
+                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                    }`}
+                  >
+                    <Box className="w-3.5 h-3.5" />
+                    Scene
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("video")}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                      viewMode === "video"
+                        ? isExpanded
+                          ? "bg-white text-black"
+                          : "bg-[var(--accent)] text-white"
+                        : isExpanded
+                          ? "text-white/60 hover:text-white hover:bg-white/10"
+                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    Video
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, FileRejection } from "react-dropzone";
 import { UploadIcon } from "@/components/ui/upload";
 import { XIcon } from "@/components/ui/x";
 import { ArrowRightIcon } from "@/components/ui/arrow-right";
@@ -28,19 +28,32 @@ export default function ImageUpload({
   const [fileSizeError, setFileSizeError] = useState<string | null>(null);
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
       setFileSizeError(null);
+      
+      // Handle rejected files first
+      if (fileRejections.length > 0) {
+        const rejection = fileRejections[0];
+        const errorCode = rejection.errors[0]?.code;
+        let error: string;
+        
+        if (errorCode === "file-too-large") {
+          const sizeMB = (rejection.file.size / (1024 * 1024)).toFixed(1);
+          error = `File too large (${sizeMB}MB). Maximum size is 4.5MB.`;
+        } else if (errorCode === "file-invalid-type") {
+          error = "Invalid file type. Please use PNG, JPG, or WEBP.";
+        } else {
+          error = rejection.errors[0]?.message || "File could not be uploaded.";
+        }
+        
+        setFileSizeError(error);
+        onError?.(error);
+        return;
+      }
+      
+      // Handle accepted files
       if (acceptedFiles.length > 0 && !disabled) {
         const file = acceptedFiles[0];
-        
-        // Check file size
-        if (file.size > MAX_FILE_SIZE) {
-          const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-          const error = `File too large (${sizeMB}MB). Maximum size is 4.5MB.`;
-          setFileSizeError(error);
-          onError?.(error);
-          return;
-        }
         
         setFileName(file.name);
         const reader = new FileReader();
@@ -62,6 +75,8 @@ export default function ImageUpload({
     maxFiles: 1,
     maxSize: MAX_FILE_SIZE,
     disabled,
+    noClick: false,
+    noDrag: false,
   });
 
   const clearPreview = (e: React.MouseEvent) => {

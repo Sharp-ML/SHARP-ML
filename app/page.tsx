@@ -747,9 +747,6 @@ function HomeContent() {
                     <h2 className="text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
-                    <p className="text-[var(--text-muted)] text-sm">
-                      Drag to rotate • Scroll to zoom • Click and drag to pan
-                    </p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button

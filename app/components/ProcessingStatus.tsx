@@ -164,7 +164,7 @@ function StageRow({
         {/* Stage progress bar for processing stage */}
         {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
           <div className="mt-2">
-            <div className="h-1 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
+            <div className="h-1 bg-[var(--input)] rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full bg-[var(--foreground)]/60"
                 initial={{ width: 0 }}
