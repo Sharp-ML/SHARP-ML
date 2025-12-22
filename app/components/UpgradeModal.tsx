@@ -35,36 +35,36 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] z-50 p-4"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[calc(100%-32px)] sm:max-w-[420px] z-50 p-0 sm:p-4"
           >
-            <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden mx-4 sm:mx-0">
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-4 pb-1">
-                <h2 className="text-lg font-semibold text-gray-900">Limit Reached</h2>
+              <div className="flex items-center justify-between px-4 sm:px-5 pt-3 sm:pt-4 pb-1">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Limit Reached</h2>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
                 >
-                  <X className="w-5 h-5 text-gray-400" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="px-5 pb-5">
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
                 {/* Message */}
-                <p className="text-gray-600 text-sm mt-2 mb-4">
+                <p className="text-gray-600 text-xs sm:text-sm mt-1.5 sm:mt-2 mb-3 sm:mb-4">
                   You&apos;ve reached your free limit of {limit} scenes. Want more? Reach out and let us know!
                 </p>
 
                 {/* Usage info */}
-                <div className="mb-4 p-3 rounded-xl bg-gray-50">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-500">Your usage</span>
-                    <span className="text-xs font-medium text-gray-700">
+                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gray-50">
+                  <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                    <span className="text-[10px] sm:text-xs text-gray-500">Your usage</span>
+                    <span className="text-[10px] sm:text-xs font-medium text-gray-700">
                       {sceneCount} / {limit} scenes
                     </span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-1 sm:h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#2196F3] rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (sceneCount / limit) * 100)}%` }}
@@ -75,14 +75,14 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
                 {/* Contact Support Button */}
                 <button
                   onClick={handleContactSupport}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#2196F3] hover:bg-[#1E88E5] text-white font-semibold text-base transition-colors flex items-center justify-center gap-3 shadow-lg shadow-blue-500/25"
+                  className="w-full py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-xl sm:rounded-2xl bg-[#2196F3] hover:bg-[#1E88E5] text-white font-semibold text-sm sm:text-base transition-colors flex items-center justify-center gap-2 sm:gap-3 shadow-lg shadow-blue-500/25"
                 >
-                  <MessageCircle className="w-5 h-5" />
+                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                   Contact Support
                 </button>
 
                 {/* Footer text */}
-                <p className="text-center text-gray-400 text-xs mt-4">
+                <p className="text-center text-gray-400 text-[10px] sm:text-xs mt-3 sm:mt-4">
                   We&apos;ll get back to you soon
                 </p>
               </div>

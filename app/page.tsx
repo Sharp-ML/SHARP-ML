@@ -575,7 +575,7 @@ function HomeContent() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 pt-12 pb-8 px-6">
+      <main className="flex-1 pt-8 sm:pt-12 pb-6 sm:pb-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="wait">
             {appState === "upload" && (
@@ -586,15 +586,15 @@ function HomeContent() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 {/* Hero Section */}
-                <div className="mb-10">
+                <div className="mb-6 sm:mb-10">
                   <motion.h1
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
-                    className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-2"
+                    className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-1.5 sm:gap-2"
                   >
                     <span>2D</span>
-                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" strokeWidth={2} />
                     <span>3D</span>
                   </motion.h1>
 
@@ -602,7 +602,7 @@ function HomeContent() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="text-base sm:text-lg text-[var(--text-muted)] leading-snug"
+                    className="text-sm sm:text-base md:text-lg text-[var(--text-muted)] leading-snug"
                   >
                     Transform any photo into an interactive 3D scene.
                   </motion.p>
@@ -613,7 +613,7 @@ function HomeContent() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="mb-10"
+                  className="mb-6 sm:mb-10"
                 >
                   <ImageUpload 
                     onImageSelect={handleImageSelect} 
@@ -653,10 +653,10 @@ function HomeContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                             onClick={() => handleSelectScene(scene)}
-                            className="group flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
+                            className="group flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
                             {/* Thumbnail */}
-                            <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
+                            <div className="relative w-12 h-9 sm:w-16 sm:h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
                               <Image
                                 src={scene.imageUrl}
                                 alt={scene.name}
@@ -700,25 +700,25 @@ function HomeContent() {
                     </div>
                   ) : (
                     // Features - minimal centered style
-                    <div className="flex items-start justify-center gap-8 py-4">
+                    <div className="flex items-start justify-center gap-4 sm:gap-8 py-2 sm:py-4">
                       {/* 10 Free scenes */}
                       <div className="step-card">
                         <div className="step-card-icon">${FREE_SCENE_LIMIT}</div>
-                        <div className="step-card-title">Free scenes</div>
+                        <div className="step-card-title text-xs sm:text-sm">Free scenes</div>
                       </div>
 
                       {/* With upgrade */}
                       <div className="step-card">
                         <div className="step-card-icon">∞</div>
-                        <div className="step-card-title">With upgrade</div>
+                        <div className="step-card-title text-xs sm:text-sm">With upgrade</div>
                       </div>
 
                       {/* AI-powered */}
                       <div className="step-card">
                         <div className="step-card-icon">
-                          <Sparkles className="w-8 h-8" strokeWidth={1.5} />
+                          <Sparkles className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.5} />
                         </div>
-                        <div className="step-card-title">AI-powered</div>
+                        <div className="step-card-title text-xs sm:text-sm">AI-powered</div>
                       </div>
                     </div>
                   )}
@@ -732,13 +732,13 @@ function HomeContent() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="max-w-xl mx-auto pt-16"
+                className="max-w-xl mx-auto pt-8 sm:pt-16"
               >
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-semibold mb-2">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-semibold mb-2">
                     Creating Your 3D Scene
                   </h2>
-                  <p className="text-[var(--text-muted)]">
+                  <p className="text-sm sm:text-base text-[var(--text-muted)]">
                     Analyzing your image and generating a 3D representation...
                   </p>
                 </div>
@@ -748,7 +748,7 @@ function HomeContent() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative w-full max-w-sm mx-auto aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border)] mb-8 bg-[var(--surface)]"
+                    className="relative w-full max-w-xs sm:max-w-sm mx-auto aspect-[4/3] rounded-xl sm:rounded-2xl overflow-hidden border border-[var(--border)] mb-6 sm:mb-8 bg-[var(--surface)]"
                   >
                     <PixelatedImage
                       src={previewUrl}
@@ -773,10 +773,10 @@ function HomeContent() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="pt-8"
+                className="pt-4 sm:pt-8"
               >
                 {/* Viewer header */}
-                <div className="mb-6">
+                <div className="mb-4 sm:mb-6">
                   <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                     <button
                       onClick={handleReset}
@@ -785,7 +785,7 @@ function HomeContent() {
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
-                    <h2 className="text-2xl font-semibold truncate">
+                    <h2 className="text-lg sm:text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
                   </div>
@@ -807,25 +807,25 @@ function HomeContent() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="max-w-xl mx-auto pt-24"
+                className="max-w-xl mx-auto pt-12 sm:pt-24"
               >
                 <div className="text-center">
-                  <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20 mx-auto mb-6">
-                    <AlertCircle className="w-6 h-6 text-[var(--error)]" strokeWidth={1.5} />
+                  <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20 mx-auto mb-4 sm:mb-6">
+                    <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--error)]" strokeWidth={1.5} />
                   </div>
-                  <h2 className="text-2xl font-semibold mb-2">
+                  <h2 className="text-xl sm:text-2xl font-semibold mb-2">
                     {isConfigError ? "Configuration Required" : "Processing Failed"}
                   </h2>
-                  <p className="text-[var(--text-muted)] mb-6">
+                  <p className="text-sm sm:text-base text-[var(--text-muted)] mb-4 sm:mb-6 px-4">
                     {error || "Something went wrong while processing your image."}
                   </p>
                 </div>
 
                 {/* Setup instructions for config errors */}
                 {isConfigError && setupInstructions && (
-                  <div className="bg-[var(--surface-elevated)] rounded-xl p-6 border border-[var(--border)] mb-8 text-left">
-                    <h3 className="font-semibold mb-4">Setup Instructions</h3>
-                    <div className="space-y-3 font-mono text-sm">
+                  <div className="bg-[var(--surface-elevated)] rounded-xl p-4 sm:p-6 border border-[var(--border)] mb-6 sm:mb-8 text-left">
+                    <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Setup Instructions</h3>
+                    <div className="space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">
                       <div className="flex gap-3">
                         <span className="text-[var(--text-muted)]">1.</span>
                         <span>{setupInstructions.step1}</span>
@@ -861,11 +861,11 @@ function HomeContent() {
       </main>
 
       {/* Footer - Clean and minimal like ConnectKit */}
-      <footer className="py-8 px-6">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+      <footer className="py-6 sm:py-8 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <Box className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} />
-            <span className="text-sm text-[var(--text-muted)]">
+            <span className="text-xs sm:text-sm text-[var(--text-muted)]">
               Powered by{" "}
               <a
                 href="https://github.com/apple/ml-sharp"
@@ -877,7 +877,7 @@ function HomeContent() {
               </a>
             </span>
           </div>
-          <div className="flex items-center gap-8 text-sm">
+          <div className="flex items-center gap-4 sm:gap-8 text-xs sm:text-sm">
             <a
               href="https://arxiv.org/abs/2512.10685"
               target="_blank"
@@ -925,7 +925,7 @@ function HomeContent() {
                       href="https://x.com/messages/compose?recipient_id=1325862778603769856"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md"
+                      className="flex items-center gap-2 px-2.5 py-2 sm:py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md"
                       onClick={() => setShowHelpMenu(false)}
                     >
                       <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -936,7 +936,7 @@ function HomeContent() {
                         setShowHelpMenu(false);
                         signOut();
                       }}
-                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md w-full text-left cursor-pointer"
+                      className="flex items-center gap-2 px-2.5 py-2 sm:py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md w-full text-left cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
                       <span>Log out</span>

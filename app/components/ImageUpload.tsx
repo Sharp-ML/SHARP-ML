@@ -120,7 +120,7 @@ export default function ImageUpload({
               exit={{ opacity: 0, scale: 0.98 }}
               className="relative"
             >
-              <div className="relative w-full max-w-md mx-auto aspect-[4/3] rounded-xl overflow-hidden border border-[var(--border)]">
+              <div className="relative w-full max-w-xs sm:max-w-md mx-auto aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden border border-[var(--border)]">
                 <PixelatedImage
                   src={preview}
                   alt="Preview"
@@ -130,15 +130,17 @@ export default function ImageUpload({
                 {!disabled && (
                   <button
                     onClick={clearPreview}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-all border border-[var(--border)] shadow-sm hover:scale-105"
+                    className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 sm:p-2 rounded-full bg-white/90 hover:bg-white transition-all border border-[var(--border)] shadow-sm hover:scale-105"
                   >
-                    <XIcon size={16} className="text-[var(--foreground)]" />
+                    <XIcon size={14} className="text-[var(--foreground)] sm:hidden" />
+                    <XIcon size={16} className="text-[var(--foreground)] hidden sm:block" />
                   </button>
                 )}
 
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                  <div className="flex items-center gap-2 text-sm text-white">
-                    <ImageIcon size={16} />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 sm:p-4">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-white">
+                    <ImageIcon size={14} className="sm:hidden" />
+                    <ImageIcon size={16} className="hidden sm:block" />
                     <span className="truncate">{fileName}</span>
                   </div>
                 </div>
@@ -148,10 +150,11 @@ export default function ImageUpload({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="mt-6 flex items-center justify-center gap-2 text-sm text-[var(--text-muted)]"
+                className="mt-4 sm:mt-6 flex items-center justify-center gap-2 text-xs sm:text-sm text-[var(--text-muted)]"
               >
                 <span>Processing will begin automatically</span>
-                <ArrowRightIcon size={16} />
+                <ArrowRightIcon size={14} className="sm:hidden" />
+                <ArrowRightIcon size={16} className="hidden sm:block" />
               </motion.div>
             </motion.div>
           ) : (
@@ -160,7 +163,7 @@ export default function ImageUpload({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-6"
+              className="flex flex-col items-center gap-4 sm:gap-6"
             >
               <motion.div
                 animate={isDragActive ? { scale: 1.05 } : {}}
@@ -168,27 +171,28 @@ export default function ImageUpload({
                 className="relative"
               >
                 <div className="icon-box">
-                  <UploadIcon size={20} className="text-[var(--text-secondary)]" />
+                  <UploadIcon size={18} className="text-[var(--text-secondary)] sm:hidden" />
+                  <UploadIcon size={20} className="text-[var(--text-secondary)] hidden sm:block" />
                 </div>
               </motion.div>
 
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">
                   {isDragActive ? "Drop your image here" : "Upload an image"}
                 </h3>
-                <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
+                <p className="text-[var(--text-muted)] text-xs sm:text-sm max-w-xs sm:max-w-sm leading-relaxed px-2">
                   Drag and drop or click to select a photo. We&apos;ll transform
                   it into an interactive 3D scene.
                 </p>
               </div>
 
-              <div className="flex items-center gap-6 text-sm text-[var(--text-muted)]">
-                <span className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+              <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[var(--text-muted)]">
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-[var(--success)]" />
                   PNG, JPG, WEBP
                 </span>
-                <span className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-[var(--text-muted)]" />
                   Max 4.5MB
                 </span>
               </div>
@@ -197,7 +201,7 @@ export default function ImageUpload({
                 <motion.div
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm"
+                  className="mt-2 sm:mt-4 px-3 sm:px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm"
                 >
                   {fileSizeError}
                 </motion.div>

@@ -129,7 +129,7 @@ function StageRow({
       initial={{ opacity: 0, x: -5 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`flex items-center gap-4 p-4 rounded-xl transition-all border ${
+      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg sm:rounded-xl transition-all border ${
         isCurrent
           ? "bg-[var(--warm-tint)] border-[var(--border)]"
           : isComplete
@@ -138,7 +138,7 @@ function StageRow({
       }`}
     >
       <div
-        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
           isCurrent
             ? "bg-[var(--foreground)]"
             : isComplete
@@ -151,7 +151,7 @@ function StageRow({
 
       <div className="flex-1 min-w-0">
         <p
-          className={`text-sm font-medium ${
+          className={`text-xs sm:text-sm font-medium ${
             isCurrent
               ? "text-[var(--foreground)]"
               : isComplete
@@ -162,13 +162,13 @@ function StageRow({
           {isComplete ? stage.labelComplete : stage.label}
         </p>
         {(isCurrent || isComplete) && (
-          <p className="text-sm text-[var(--text-muted)] truncate">
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] truncate">
             {isComplete ? stage.descriptionComplete : stage.description}
           </p>
         )}
         {/* Stage progress bar for processing stage */}
         {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
-          <div className="mt-2">
+          <div className="mt-1.5 sm:mt-2">
             <div className="h-1 bg-[var(--input)] rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full bg-[var(--foreground)]/60"
@@ -177,7 +177,7 @@ function StageRow({
                 transition={{ duration: 0.5, ease: "easeOut" }}
               />
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
+            <p className="text-[10px] sm:text-xs text-[var(--text-muted)] mt-1">
               ~{Math.max(1, Math.round((100 - stageProgress) / 100 * 60))}s remaining
             </p>
           </div>
@@ -189,7 +189,7 @@ function StageRow({
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]"
+              className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-[var(--foreground)]"
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{
                 duration: 1,
@@ -201,7 +201,7 @@ function StageRow({
         </div>
       )}
       {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
-        <span className="text-xs font-medium text-[var(--text-muted)] tabular-nums">
+        <span className="text-[10px] sm:text-xs font-medium text-[var(--text-muted)] tabular-nums">
           {Math.round(stageProgress)}%
         </span>
       )}
@@ -224,13 +224,13 @@ export default function ProcessingStatus({
         animate={{ opacity: 1, y: 0 }}
         className="card border-[var(--error)]/20"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20">
-            <AlertCircle className="w-5 h-5 text-[var(--error)]" strokeWidth={1.5} />
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--error)]" strokeWidth={1.5} />
           </div>
-          <div>
-            <h3 className="font-semibold text-[var(--error)]">Processing Failed</h3>
-            <p className="text-sm text-[var(--text-muted)]">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[var(--error)] text-sm sm:text-base">Processing Failed</h3>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] truncate">
               {errorMessage || "Something went wrong. Please try again."}
             </p>
           </div>
@@ -246,14 +246,14 @@ export default function ProcessingStatus({
       className="card"
     >
       {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-sm font-medium ${status === "complete" ? "text-[var(--success)]" : ""}`}>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <span className={`text-xs sm:text-sm font-medium ${status === "complete" ? "text-[var(--success)]" : ""}`}>
             {status === "complete" ? stages[currentIndex]?.labelComplete : stages[currentIndex]?.label || "Processing..."}
           </span>
-          <span className="text-sm text-[var(--text-muted)]">{progress}%</span>
+          <span className="text-xs sm:text-sm text-[var(--text-muted)]">{progress}%</span>
         </div>
-        <div className="h-2 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
+        <div className="h-1.5 sm:h-2 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
           <motion.div
             className={`h-full rounded-full ${status === "complete" ? "bg-[var(--success)]" : "bg-[var(--foreground)]"}`}
             initial={{ width: 0 }}
@@ -264,7 +264,7 @@ export default function ProcessingStatus({
       </div>
 
       {/* Stages */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {stages.map((stage, index) => (
           <StageRow
             key={stage.id}
