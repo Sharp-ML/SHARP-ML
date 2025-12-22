@@ -733,7 +733,6 @@ function HomeContent() {
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                             </div>
-
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
