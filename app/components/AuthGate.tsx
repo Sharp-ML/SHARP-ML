@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, LogOut, User, Sparkles, ArrowRight } from "lucide-react";
 import { LayersIcon } from "@/components/ui/layers";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface AuthGateProps {
   children: React.ReactNode;
@@ -14,15 +14,6 @@ interface AuthGateProps {
 // Demo card component showing 2D to 3D transformation
 function DemoCard() {
   const [isHovered, setIsHovered] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(0);
-
-  // Continuous subtle rotation animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAutoRotate((prev) => (prev + 0.5) % 360);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <motion.div
@@ -35,7 +26,7 @@ function DemoCard() {
         {/* Card container */}
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
           {/* Before/After Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 mb-4">
             <span className="text-sm font-medium text-[var(--text-muted)]">2D Image</span>
             <ArrowRight className="w-4 h-4 text-[var(--text-muted)]" />
             <span className="text-sm font-medium text-[var(--primary)]">3D Scene</span>
@@ -62,65 +53,48 @@ function DemoCard() {
                 className="object-cover"
                 priority
               />
-              {/* 2D Label */}
-              <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full">
-                <span className="text-xs font-medium text-white">2D</span>
-              </div>
             </motion.div>
 
-            {/* 3D Transformed View */}
+            {/* 3D Transformed View - Video on hover */}
             <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ perspective: "1000px" }}
+              className="absolute inset-0"
               animate={{
                 opacity: isHovered ? 1 : 0,
               }}
               transition={{ duration: 0.5 }}
             >
-              <motion.div
-                className="relative w-full h-full"
-                animate={{
-                  rotateY: isHovered ? Math.sin(autoRotate * 0.02) * 15 : 0,
-                  rotateX: isHovered ? Math.cos(autoRotate * 0.015) * 5 : 0,
-                  scale: isHovered ? 1.02 : 1,
-                }}
-                transition={{ duration: 0.3 }}
-                style={{ transformStyle: "preserve-3d" }}
-              >
-                <Image
-                  src="/demo-cat.png"
-                  alt="3D transformed scene"
-                  fill
-                  className="object-cover rounded-xl"
-                  style={{
-                    filter: isHovered ? "brightness(1.05) contrast(1.05)" : "none",
-                  }}
-                  priority
+              {isHovered && (
+                <video
+                  src="/cat-video.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="absolute inset-0 w-full object-cover"
+                  style={{ height: "calc(100% + 80px)", objectPosition: "top" }}
                 />
-                {/* Depth layers effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-xl"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)",
-                    transform: "translateZ(20px)",
-                  }}
-                  animate={{
-                    opacity: isHovered ? 1 : 0,
-                  }}
-                />
-                {/* 3D Label */}
-                <motion.div 
-                  className="absolute bottom-3 left-3 px-3 py-1.5 bg-[var(--primary)]/90 backdrop-blur-sm rounded-full"
-                  animate={{
-                    opacity: isHovered ? 1 : 0,
-                    y: isHovered ? 0 : 10,
-                  }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <span className="text-xs font-medium text-white">3D</span>
-                </motion.div>
-              </motion.div>
+              )}
             </motion.div>
+
+            {/* 2D/3D Label Chip - stays visible, only text changes */}
+            <div 
+              className={`absolute bottom-3 left-3 px-3 py-1.5 backdrop-blur-sm rounded-full z-10 overflow-hidden transition-colors duration-300 ${
+                isHovered ? "bg-[var(--primary)]/90" : "bg-black/60"
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={isHovered ? "3d" : "2d"}
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -10, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-xs font-medium text-white block"
+                >
+                  {isHovered ? "3D" : "2D"}
+                </motion.span>
+              </AnimatePresence>
+            </div>
 
             {/* Hover instruction */}
             <motion.div

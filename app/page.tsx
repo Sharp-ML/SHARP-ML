@@ -720,37 +720,18 @@ function HomeContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                             onClick={() => handleSelectScene(scene)}
-                            onMouseEnter={() => setHoveredSceneId(scene.id)}
-                            onMouseLeave={() => setHoveredSceneId(null)}
                             className="group flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
-                            {/* Thumbnail with 3D preview on hover */}
+                            {/* Thumbnail */}
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
-                              {/* Static image preview */}
                               <Image
                                 src={scene.previewUrl}
                                 alt={scene.name}
                                 fill
-                                className={`object-cover transition-opacity duration-200 ${
-                                  hoveredSceneId === scene.id ? "opacity-0" : "opacity-100"
-                                }`}
+                                className="object-cover"
                                 unoptimized
                               />
-                              {/* Interactive 3D preview on hover */}
-                              {hoveredSceneId === scene.id && (
-                                <div 
-                                  className="absolute inset-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                  <GaussianViewer
-                                    modelUrl={scene.modelUrl}
-                                    modelType={scene.modelType}
-                                    mini
-                                  />
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                             </div>
 
                             {/* Info */}

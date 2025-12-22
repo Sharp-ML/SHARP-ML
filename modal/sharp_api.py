@@ -23,7 +23,7 @@ from pathlib import Path
 app = modal.App("apple-sharp")
 
 # Define the container image with all dependencies
-# IMAGE_VERSION: v7-20231221 - Explicitly add all Sharp dependencies
+# IMPORTANT: Install requests AFTER Sharp to prevent dependency conflicts
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -34,36 +34,31 @@ sharp_image = (
         "libsm6",
         "libxext6",
         "libxrender-dev",
-        "ffmpeg",
     )
-    # Install ALL required packages explicitly
     .pip_install(
-        # Core ML packages
         "torch>=2.0.0",
         "torchvision",
         "numpy",
         "Pillow",
-        # Sharp dependencies (explicitly listed since setup.py may be incomplete)
-        "scipy>=1.11.0",
-        "imageio>=2.31.0",
         "plyfile",
         "tqdm",
         "einops",
         "timm",
         "huggingface_hub",
-        # API dependencies
         "fastapi",
-        "requests>=2.31.0",
     )
     .run_commands(
         # Clone the Sharp repository
         "git clone https://github.com/apple/ml-sharp.git /opt/ml-sharp",
-        # Install Sharp package (no-deps since we've installed everything)
+        # Install Sharp package (use --no-deps to avoid overwriting our packages)
         "cd /opt/ml-sharp && pip install -e . --no-deps",
-        # Verify all key imports work
-        "python -c 'from sharp.cli import main_cli; import requests; import imageio; print(\"All Sharp imports OK\")'",
-        # Force cache bust
-        "echo 'Image built: 2024-12-21-v7-explicit-deps'",
+    )
+    # Install requests AFTER Sharp to ensure it's available at runtime
+    # force_build=True ensures this layer is rebuilt fresh
+    .pip_install("requests", force_build=True)
+    .run_commands(
+        # Verify requests is installed and available
+        "python -c 'import requests; print(\"requests version:\", requests.__version__)'",
     )
 )
 
@@ -75,7 +70,7 @@ MODEL_CACHE_PATH = "/cache/models"
 
 @app.cls(
     image=sharp_image,
-    gpu="A10G",  # Use A10G GPU for good performance/cost ratio
+    gpu="H100",  # Use H100 GPU for good performance/cost ratio
     timeout=300,  # 5 minute timeout
     volumes={MODEL_CACHE_PATH: model_cache},
     scaledown_window=300,  # Keep container warm for 5 minutes
@@ -208,8 +203,8 @@ class SharpModel:
                     "error": "No image provided. Send 'image' (base64) or 'image_url'."
                 }
             
-            # Run prediction - use .local() to call the Modal method from within the class
-            ply_bytes = self.predict.local(image_bytes)
+            # Run prediction
+            ply_bytes = self.predict(image_bytes)
             
             # Encode result as base64
             ply_base64 = base64.b64encode(ply_bytes).decode("utf-8")
