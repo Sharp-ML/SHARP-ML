@@ -84,11 +84,6 @@ NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
 
-# Stripe
-STRIPE_SECRET_KEY="sk_..."
-STRIPE_PRICE_ID="price_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-
 # App
 NEXT_PUBLIC_APP_URL="https://your-domain.com"
 
@@ -206,8 +201,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Usage Limits
 
-- **Free tier**: 3 scene generations per user
-- **Pro tier**: Unlimited scene generations (one-time payment)
+- **Free tier**: 10 scene generations per user
+
 
 ### Modal Configuration
 
@@ -216,10 +211,6 @@ The `modal/sharp_api.py` file configures:
 - **Timeout**: 300 seconds
 - **Container idle**: 300 seconds (keeps warm for faster subsequent requests)
 - **Model caching**: Uses Modal Volume to cache the 1.4GB model weights
-
-## About the Technology
-
-This app uses [Apple SHARP](https://huggingface.co/apple/Sharp) (Sharp Monocular View Synthesis), a state-of-the-art model for generating 3D Gaussian splats from a single image
 
 ## Links
 
