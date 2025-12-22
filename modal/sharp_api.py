@@ -25,7 +25,7 @@ from pathlib import Path
 app = modal.App("apple-sharp")
 
 # Define the container image with all dependencies
-# IMAGE_VERSION: v11-20241221 - Direct Python API (no subprocess)
+# IMAGE_VERSION: v15-20241221 - Fast in-memory PLY export
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -78,7 +78,7 @@ sharp_image = (
         # Verify all key imports work
         "python -c 'from sharp.models import create_predictor, PredictorParams; print(\"Sharp model imports OK\")'",
         # Force cache bust
-        "echo 'Image built: 2024-12-21-v11-direct-python-api'",
+        "echo 'Image built: 2024-12-21-v15-fast-ply'",
     )
 )
 
@@ -87,6 +87,238 @@ model_cache = modal.Volume.from_name("sharp-model-cache", create_if_missing=True
 
 MODEL_CACHE_PATH = "/cache/models"
 DEFAULT_MODEL_URL = "https://ml-site.cdn-apple.com/models/sharp/sharp_2572gikvuh.pt"
+
+
+# =============================================================================
+# OPTIMIZED GPU-BASED POSTPROCESSING
+# The original Sharp code moves tensors to CPU for SVD and scipy for quaternions.
+# These functions keep everything on GPU for ~10x speedup.
+# =============================================================================
+
+def quaternions_from_rotation_matrices_gpu(matrices: "torch.Tensor") -> "torch.Tensor":
+    """
+    Pure PyTorch GPU implementation of rotation matrix to quaternion conversion.
+    Avoids the CPU/scipy bottleneck in the original Sharp code.
+    
+    Based on the Shepperd method for numerical stability.
+    Input: (..., 3, 3) rotation matrices
+    Output: (..., 4) quaternions [w, x, y, z]
+    """
+    import torch
+    
+    batch_shape = matrices.shape[:-2]
+    matrices = matrices.reshape(-1, 3, 3)
+    
+    # Extract matrix elements
+    m00, m01, m02 = matrices[:, 0, 0], matrices[:, 0, 1], matrices[:, 0, 2]
+    m10, m11, m12 = matrices[:, 1, 0], matrices[:, 1, 1], matrices[:, 1, 2]
+    m20, m21, m22 = matrices[:, 2, 0], matrices[:, 2, 1], matrices[:, 2, 2]
+    
+    # Compute quaternion components using Shepperd's method
+    trace = m00 + m11 + m22
+    
+    # Allocate output
+    quaternions = torch.zeros(matrices.shape[0], 4, device=matrices.device, dtype=matrices.dtype)
+    
+    # Case 1: trace > 0
+    mask1 = trace > 0
+    if mask1.any():
+        s = torch.sqrt(trace[mask1] + 1.0) * 2  # s = 4 * w
+        quaternions[mask1, 0] = 0.25 * s
+        quaternions[mask1, 1] = (m21[mask1] - m12[mask1]) / s
+        quaternions[mask1, 2] = (m02[mask1] - m20[mask1]) / s
+        quaternions[mask1, 3] = (m10[mask1] - m01[mask1]) / s
+    
+    # Case 2: m00 > m11 and m00 > m22
+    mask2 = (~mask1) & (m00 > m11) & (m00 > m22)
+    if mask2.any():
+        s = torch.sqrt(1.0 + m00[mask2] - m11[mask2] - m22[mask2]) * 2  # s = 4 * x
+        quaternions[mask2, 0] = (m21[mask2] - m12[mask2]) / s
+        quaternions[mask2, 1] = 0.25 * s
+        quaternions[mask2, 2] = (m01[mask2] + m10[mask2]) / s
+        quaternions[mask2, 3] = (m02[mask2] + m20[mask2]) / s
+    
+    # Case 3: m11 > m22
+    mask3 = (~mask1) & (~mask2) & (m11 > m22)
+    if mask3.any():
+        s = torch.sqrt(1.0 + m11[mask3] - m00[mask3] - m22[mask3]) * 2  # s = 4 * y
+        quaternions[mask3, 0] = (m02[mask3] - m20[mask3]) / s
+        quaternions[mask3, 1] = (m01[mask3] + m10[mask3]) / s
+        quaternions[mask3, 2] = 0.25 * s
+        quaternions[mask3, 3] = (m12[mask3] + m21[mask3]) / s
+    
+    # Case 4: remaining (m22 is largest)
+    mask4 = (~mask1) & (~mask2) & (~mask3)
+    if mask4.any():
+        s = torch.sqrt(1.0 + m22[mask4] - m00[mask4] - m11[mask4]) * 2  # s = 4 * z
+        quaternions[mask4, 0] = (m10[mask4] - m01[mask4]) / s
+        quaternions[mask4, 1] = (m02[mask4] + m20[mask4]) / s
+        quaternions[mask4, 2] = (m12[mask4] + m21[mask4]) / s
+        quaternions[mask4, 3] = 0.25 * s
+    
+    # Normalize quaternions
+    quaternions = quaternions / torch.linalg.norm(quaternions, dim=-1, keepdim=True)
+    
+    # Reshape to original batch shape
+    return quaternions.reshape(batch_shape + (4,))
+
+
+def fast_decompose_covariance_matrices_gpu(covariance_matrices: "torch.Tensor"):
+    """GPU-optimized SVD decomposition - stays entirely on GPU."""
+    import torch
+    
+    device = covariance_matrices.device
+    dtype = covariance_matrices.dtype
+    
+    # Keep on GPU! The original code does .cpu() here which is the bottleneck
+    rotations, singular_values_2, _ = torch.linalg.svd(covariance_matrices)
+    
+    # Fix reflection matrices (same logic as original)
+    det = torch.linalg.det(rotations)
+    reflection_mask = det < 0
+    if reflection_mask.any():
+        # Flip the last column of reflections to make them rotations
+        rotations[reflection_mask, :, -1] *= -1
+    
+    # Use our pure PyTorch GPU implementation instead of scipy
+    quaternions = quaternions_from_rotation_matrices_gpu(rotations)
+    singular_values = singular_values_2.sqrt()
+    
+    return quaternions.to(dtype=dtype), singular_values.to(dtype=dtype)
+
+
+def fast_apply_transform_gpu(gaussians: "Gaussians3D", transform: "torch.Tensor"):
+    """GPU-optimized transform - uses fast GPU SVD."""
+    import torch
+    from sharp.utils.gaussians import Gaussians3D, compose_covariance_matrices
+    
+    transform_linear = transform[..., :3, :3]
+    transform_offset = transform[..., :3, 3]
+
+    mean_vectors = gaussians.mean_vectors @ transform_linear.T + transform_offset
+    covariance_matrices = compose_covariance_matrices(
+        gaussians.quaternions, gaussians.singular_values
+    )
+    covariance_matrices = (
+        transform_linear @ covariance_matrices @ transform_linear.transpose(-1, -2)
+    )
+    
+    # Use our fast GPU-based decomposition instead of the slow CPU one
+    quaternions, singular_values = fast_decompose_covariance_matrices_gpu(covariance_matrices)
+
+    return Gaussians3D(
+        mean_vectors=mean_vectors,
+        singular_values=singular_values,
+        quaternions=quaternions,
+        colors=gaussians.colors,
+        opacities=gaussians.opacities,
+    )
+
+
+def fast_unproject_gaussians_gpu(gaussians_ndc, extrinsics, intrinsics, image_shape):
+    """GPU-optimized unprojection - keeps all ops on GPU."""
+    from sharp.utils.gaussians import get_unprojection_matrix
+    
+    unprojection_matrix = get_unprojection_matrix(extrinsics, intrinsics, image_shape)
+    gaussians = fast_apply_transform_gpu(gaussians_ndc, unprojection_matrix[:3])
+    return gaussians
+
+
+def fast_save_ply_bytes(gaussians, f_px: float, image_shape: tuple) -> bytes:
+    """
+    Optimized PLY export that returns bytes directly (no temp file).
+    Minimizes GPU->CPU transfers and uses efficient numpy operations.
+    """
+    import torch
+    import numpy as np
+    import io
+    from plyfile import PlyData, PlyElement
+    from sharp.utils import color_space as cs_utils
+    from sharp.utils.gaussians import convert_rgb_to_spherical_harmonics
+    
+    # Move everything to CPU in one batch
+    with torch.no_grad():
+        xyz = gaussians.mean_vectors.flatten(0, 1).cpu()
+        scale_logits = torch.log(gaussians.singular_values).flatten(0, 1).cpu()
+        quaternions = gaussians.quaternions.flatten(0, 1).cpu()
+        colors_linear = gaussians.colors.flatten(0, 1).cpu()
+        opacities = gaussians.opacities.flatten(0, 1).cpu()
+        
+        # Color space conversion on CPU (fast)
+        colors_srgb = cs_utils.linearRGB2sRGB(colors_linear)
+        colors = convert_rgb_to_spherical_harmonics(colors_srgb)
+        
+        # Opacity logits
+        opacity_logits = torch.log(opacities / (1.0 - opacities)).unsqueeze(-1)
+        
+        # Disparity calculation
+        disparity = 1.0 / gaussians.mean_vectors[0, ..., -1].cpu()
+        quantiles = torch.quantile(disparity, q=torch.tensor([0.1, 0.9])).numpy()
+    
+    # Convert to numpy efficiently (single operation per tensor)
+    xyz_np = xyz.numpy()
+    colors_np = colors.numpy()
+    opacity_np = opacity_logits.numpy()
+    scale_np = scale_logits.numpy()
+    quat_np = quaternions.numpy()
+    
+    num_gaussians = len(xyz_np)
+    image_height, image_width = image_shape
+    
+    # Build structured array directly (avoid list(map(tuple, ...)) which is slow)
+    dtype_full = np.dtype([
+        ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
+        ('f_dc_0', 'f4'), ('f_dc_1', 'f4'), ('f_dc_2', 'f4'),
+        ('opacity', 'f4'),
+        ('scale_0', 'f4'), ('scale_1', 'f4'), ('scale_2', 'f4'),
+        ('rot_0', 'f4'), ('rot_1', 'f4'), ('rot_2', 'f4'), ('rot_3', 'f4'),
+    ])
+    
+    elements = np.empty(num_gaussians, dtype=dtype_full)
+    elements['x'] = xyz_np[:, 0]
+    elements['y'] = xyz_np[:, 1]
+    elements['z'] = xyz_np[:, 2]
+    elements['f_dc_0'] = colors_np[:, 0]
+    elements['f_dc_1'] = colors_np[:, 1]
+    elements['f_dc_2'] = colors_np[:, 2]
+    elements['opacity'] = opacity_np[:, 0]
+    elements['scale_0'] = scale_np[:, 0]
+    elements['scale_1'] = scale_np[:, 1]
+    elements['scale_2'] = scale_np[:, 2]
+    elements['rot_0'] = quat_np[:, 0]
+    elements['rot_1'] = quat_np[:, 1]
+    elements['rot_2'] = quat_np[:, 2]
+    elements['rot_3'] = quat_np[:, 3]
+    
+    vertex_elements = PlyElement.describe(elements, 'vertex')
+    
+    # Metadata elements (small, fast)
+    image_size_arr = np.array([(image_width,), (image_height,)], dtype=[('image_size', 'u4')])
+    intrinsic_arr = np.array(
+        [(f_px,), (0,), (image_width * 0.5,), (0,), (f_px,), (image_height * 0.5,), (0,), (0,), (1,)],
+        dtype=[('intrinsic', 'f4')]
+    )
+    extrinsic_arr = np.array([(v,) for v in np.eye(4).flatten()], dtype=[('extrinsic', 'f4')])
+    frame_arr = np.array([(1,), (num_gaussians,)], dtype=[('frame', 'i4')])
+    disparity_arr = np.array([(quantiles[0],), (quantiles[1],)], dtype=[('disparity', 'f4')])
+    color_space_arr = np.array([(cs_utils.encode_color_space('sRGB'),)], dtype=[('color_space', 'u1')])
+    version_arr = np.array([(1,), (5,), (0,)], dtype=[('version', 'u1')])
+    
+    plydata = PlyData([
+        vertex_elements,
+        PlyElement.describe(extrinsic_arr, 'extrinsic'),
+        PlyElement.describe(intrinsic_arr, 'intrinsic'),
+        PlyElement.describe(image_size_arr, 'image_size'),
+        PlyElement.describe(frame_arr, 'frame'),
+        PlyElement.describe(disparity_arr, 'disparity'),
+        PlyElement.describe(color_space_arr, 'color_space'),
+        PlyElement.describe(version_arr, 'version'),
+    ])
+    
+    # Write to memory buffer instead of file
+    buffer = io.BytesIO()
+    plydata.write(buffer)
+    return buffer.getvalue()
 
 
 @app.cls(
@@ -182,7 +414,7 @@ class SharpModel:
         import torch.nn.functional as F
         import numpy as np
         from PIL import Image
-        from sharp.utils.gaussians import save_ply, unproject_gaussians
+        # Note: we use fast_save_ply_bytes instead of sharp.utils.gaussians.save_ply
         from sharp.utils.io import convert_focallength
         
         start_time = time.time()
@@ -233,6 +465,8 @@ class SharpModel:
         
         # Postprocess: Convert to metric space
         print("Running postprocessing...")
+        postprocess_start = time.time()
+        
         intrinsics = torch.tensor(
             [
                 [f_px, 0, width / 2, 0],
@@ -247,20 +481,27 @@ class SharpModel:
         intrinsics_resized[0] *= internal_shape[0] / width
         intrinsics_resized[1] *= internal_shape[1] / height
         
-        gaussians = unproject_gaussians(
+        unproject_start = time.time()
+        # Use fast GPU-based unprojection (original Sharp code moves to CPU for SVD)
+        gaussians = fast_unproject_gaussians_gpu(
             gaussians_ndc,
             torch.eye(4, device=self.device),
             intrinsics_resized,
             internal_shape
         )
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        unproject_time = time.time() - unproject_start
+        print(f"  unproject_gaussians (GPU): {unproject_time:.3f}s")
         
-        # Save to PLY file
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ply_path = Path(tmpdir) / "output.ply"
-            save_ply(gaussians, f_px, (height, width), ply_path)
-            
-            with open(ply_path, "rb") as f:
-                ply_bytes = f.read()
+        # Save to PLY (in-memory, no temp files)
+        save_start = time.time()
+        ply_bytes = fast_save_ply_bytes(gaussians, f_px, (height, width))
+        save_time = time.time() - save_start
+        print(f"  save_ply (fast): {save_time:.3f}s")
+        
+        postprocess_time = time.time() - postprocess_start
+        print(f"  postprocessing total: {postprocess_time:.3f}s")
         
         elapsed = time.time() - start_time
         print(f"Total processing time: {elapsed:.3f}s (inference: {inference_time:.3f}s)")
