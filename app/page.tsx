@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Box,
@@ -9,22 +10,25 @@ import {
   ArrowRight,
   Github,
   AlertCircle,
-  Move3D,
   Clock,
   Trash2,
   ChevronRight,
   Share2,
   Check,
   ImagePlus,
+  Sparkles,
 } from "lucide-react";
-import { UploadIcon } from "@/components/ui/upload";
-import { CpuIcon } from "@/components/ui/cpu";
 import Image from "next/image";
 import ImageUpload from "./components/ImageUpload";
 import GaussianViewer from "./components/GaussianViewer";
 import ProcessingStatus from "./components/ProcessingStatus";
 import PixelatedImage from "./components/PixelatedImage";
 import { useScenesHistory, SavedScene } from "./hooks/useScenesHistory";
+import { AuthGate } from "./components/AuthGate";
+import { signOut } from "next-auth/react";
+import { UpgradeModal } from "./components/UpgradeModal";
+
+const FREE_SCENE_LIMIT = 3;
 
 type AppState = "upload" | "processing" | "viewing" | "error";
 type ProcessingStage =
@@ -41,6 +45,12 @@ interface SetupInstructions {
   step2: string;
   step3: string;
   step4?: string;
+}
+
+interface UserUsage {
+  sceneCount: number;
+  isPaid: boolean;
+  remainingUploads: number | null;
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -60,9 +70,11 @@ function formatRelativeTime(timestamp: number): string {
 // Wrapper component to handle Suspense boundary for useSearchParams
 export default function Home() {
   return (
-    <Suspense fallback={<HomeLoading />}>
-      <HomeContent />
-    </Suspense>
+    <AuthGate>
+      <Suspense fallback={<HomeLoading />}>
+        <HomeContent />
+      </Suspense>
+    </AuthGate>
   );
 }
 
@@ -78,6 +90,7 @@ function HomeLoading() {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, update: updateSession } = useSession();
   
   const [appState, setAppState] = useState<AppState>("upload");
   const [processingStage, setProcessingStage] =
@@ -95,6 +108,10 @@ function HomeContent() {
   const [currentSceneName, setCurrentSceneName] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Usage tracking state
+  const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   // Scene history persistence
   const {
     scenes,
@@ -108,6 +125,44 @@ function HomeContent() {
   const currentPreviewDataUrl = useRef<string | null>(null);
   // Ref to store the image URL from API for saving
   const currentImageUrl = useRef<string | null>(null);
+
+  // Fetch user usage data on mount and after session changes
+  useEffect(() => {
+    async function fetchUsage() {
+      if (!session?.user) return;
+      
+      try {
+        const response = await fetch("/api/user");
+        if (response.ok) {
+          const data = await response.json();
+          setUserUsage({
+            sceneCount: data.sceneCount,
+            isPaid: data.isPaid,
+            remainingUploads: data.remainingUploads,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user usage:", error);
+      }
+    }
+    
+    fetchUsage();
+  }, [session]);
+
+  // Check for payment success/cancelled in URL
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (payment === "success") {
+      // Refresh session and usage data
+      updateSession();
+      setUserUsage(prev => prev ? { ...prev, isPaid: true, remainingUploads: null } : null);
+      // Clean up URL
+      router.replace("/", { scroll: false });
+    } else if (payment === "cancelled") {
+      // Clean up URL
+      router.replace("/", { scroll: false });
+    }
+  }, [searchParams, router, updateSession]);
 
   // Parse URL parameters on mount to load shared scene
   useEffect(() => {
@@ -154,7 +209,16 @@ function HomeContent() {
     });
   }, []);
 
+  // Check if user can upload
+  const canUpload = userUsage?.isPaid || (userUsage?.remainingUploads ?? FREE_SCENE_LIMIT) > 0;
+
   const handleImageSelect = useCallback(async (file: File) => {
+    // Check if user can upload before proceeding
+    if (!canUpload) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setAppState("processing");
     setProcessingStage("uploading");
     setProgress(0);
@@ -227,6 +291,17 @@ function HomeContent() {
         throw new Error("File too large. Please use an image under 4.5MB.");
       }
 
+      // Handle 401 (unauthorized)
+      if (response.status === 401) {
+        throw new Error("Please sign in to continue.");
+      }
+
+      // Handle 402 (payment required)
+      if (response.status === 402) {
+        setShowUpgradeModal(true);
+        throw new Error("You've reached your free limit. Upgrade to continue.");
+      }
+
       let data;
       try {
         data = await response.json();
@@ -241,6 +316,10 @@ function HomeContent() {
           setIsConfigError(true);
           setSetupInstructions(data.setup);
           throw new Error(data.message || "Server configuration error");
+        }
+        // Check if payment is required
+        if (data.requiresPayment) {
+          setShowUpgradeModal(true);
         }
         // Include details in error message if available
         const errorMsg = data.details 
@@ -273,6 +352,15 @@ function HomeContent() {
       setImageUrl(newImageUrl);
       currentImageUrl.current = newImageUrl;
 
+      // Update usage from response
+      if (data.usage) {
+        setUserUsage({
+          sceneCount: data.usage.sceneCount,
+          isPaid: data.usage.isPaid,
+          remainingUploads: data.usage.remainingUploads,
+        });
+      }
+
       // Save to history if we have the preview data URL
       if (currentPreviewDataUrl.current) {
         addScene({
@@ -300,7 +388,7 @@ function HomeContent() {
       setProcessingStage("error");
       setAppState("error");
     }
-  }, [addScene, updateUrlForScene]);
+  }, [addScene, updateUrlForScene, canUpload]);
 
   const handleReset = useCallback(() => {
     setAppState("upload");
@@ -403,6 +491,14 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        sceneCount={userUsage?.sceneCount ?? 0}
+        limit={FREE_SCENE_LIMIT}
+      />
+
       {/* Debug Panel - Development Only */}
       {isDev && !debugPanelHidden && (
         <div className="fixed bottom-4 right-4 z-50 bg-black/90 text-white p-4 rounded-xl shadow-2xl text-xs max-w-xs">
@@ -484,6 +580,12 @@ function HomeContent() {
             >
               Clear History
             </button>
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="px-2 py-1 rounded bg-purple-500/50 hover:bg-purple-500/70"
+            >
+              Upgrade Modal
+            </button>
           </div>
           {/* 3D Viewer Debug Controls */}
           {appState === "viewing" && (
@@ -532,13 +634,13 @@ function HomeContent() {
             </div>
           )}
           <div className="mt-2 pt-2 border-t border-white/20 text-[10px] opacity-50">
-            Current: {appState} {appState === "processing" && `→ ${processingStage}`} | Scenes: {scenes.length}
+            Current: {appState} {appState === "processing" && `→ ${processingStage}`} | Scenes: {scenes.length} | Usage: {userUsage?.sceneCount ?? 0}/{FREE_SCENE_LIMIT}
           </div>
         </div>
       )}
 
-      {/* Main Content - no fixed header */}
-      <main className="flex-1 pt-16 pb-8 px-6">
+      {/* Main Content */}
+      <main className="flex-1 pt-12 pb-8 px-6">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="wait">
             {appState === "upload" && (
@@ -576,7 +678,11 @@ function HomeContent() {
                   transition={{ delay: 0.2 }}
                   className="mb-10"
                 >
-                  <ImageUpload onImageSelect={handleImageSelect} />
+                  <ImageUpload 
+                    onImageSelect={handleImageSelect} 
+                    disabled={!canUpload}
+                    onDisabledClick={() => setShowUpgradeModal(true)}
+                  />
                 </motion.div>
 
                 {/* How it works OR Recent Scenes */}
@@ -657,39 +763,26 @@ function HomeContent() {
                       </div>
                     </div>
                   ) : (
-                    // How it works - GitHub-style cards
-                    <div className="flex items-stretch gap-4">
-                      {/* Card 1 */}
-                      <div className="step-card flex-1">
-                        <div className="step-card-icon">
-                          <UploadIcon size={16} className="text-[var(--text-secondary)]" />
-                        </div>
-                        <div className="step-card-title">Upload</div>
-                        <div className="step-card-description">Drop any photo to get started.</div>
+                    // Features - minimal centered style
+                    <div className="flex items-start justify-center gap-16 sm:gap-24 py-4">
+                      {/* 3 Free scenes */}
+                      <div className="step-card">
+                        <div className="step-card-icon">3</div>
+                        <div className="step-card-title">Free scenes</div>
                       </div>
 
-                      {/* Arrow 1 */}
-                      <ArrowRight className="w-4 h-4 text-[var(--text-muted)] opacity-40 flex-shrink-0 self-center" strokeWidth={1.5} />
-
-                      {/* Card 2 */}
-                      <div className="step-card flex-1">
-                        <div className="step-card-icon">
-                          <CpuIcon size={16} className="text-[var(--text-secondary)]" />
-                        </div>
-                        <div className="step-card-title">Process</div>
-                        <div className="step-card-description">AI analyzes depth and structure.</div>
+                      {/* With upgrade */}
+                      <div className="step-card">
+                        <div className="step-card-icon">∞</div>
+                        <div className="step-card-title">With upgrade</div>
                       </div>
 
-                      {/* Arrow 2 */}
-                      <ArrowRight className="w-4 h-4 text-[var(--text-muted)] opacity-40 flex-shrink-0 self-center" strokeWidth={1.5} />
-
-                      {/* Card 3 */}
-                      <div className="step-card flex-1">
+                      {/* AI-powered */}
+                      <div className="step-card">
                         <div className="step-card-icon">
-                          <Move3D className="w-4 h-4" strokeWidth={1.5} />
+                          <Sparkles className="w-8 h-8" strokeWidth={1.5} />
                         </div>
-                        <div className="step-card-title">Explore</div>
-                        <div className="step-card-description">Navigate your 3D scene.</div>
+                        <div className="step-card-title">AI-powered</div>
                       </div>
                     </div>
                   )}
@@ -902,6 +995,12 @@ function HomeContent() {
               <Github className="w-4 h-4" strokeWidth={1.5} />
               <span>GitHub</span>
             </a>
+            <button
+              onClick={() => signOut()}
+              className="text-link"
+            >
+              Log out
+            </button>
           </div>
         </div>
       </footer>

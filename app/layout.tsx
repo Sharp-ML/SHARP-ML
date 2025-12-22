@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Image to 3D — Transform Photos to 3D",
@@ -31,7 +32,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <div className="gradient-bg" />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

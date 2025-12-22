@@ -15,12 +15,14 @@ const MAX_FILE_SIZE = 4.5 * 1024 * 1024;
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
   disabled?: boolean;
+  onDisabledClick?: () => void;
   onError?: (error: string) => void;
 }
 
 export default function ImageUpload({
   onImageSelect,
   disabled,
+  onDisabledClick,
   onError,
 }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
@@ -75,9 +77,16 @@ export default function ImageUpload({
     maxFiles: 1,
     maxSize: MAX_FILE_SIZE,
     disabled,
-    noClick: false,
-    noDrag: false,
+    noClick: disabled,
+    noDrag: disabled,
   });
+
+  // Handle click when disabled (to show upgrade modal)
+  const handleDisabledClick = () => {
+    if (disabled && onDisabledClick) {
+      onDisabledClick();
+    }
+  };
 
   const clearPreview = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -95,6 +104,7 @@ export default function ImageUpload({
     >
       <div
         {...getRootProps()}
+        onClick={disabled ? handleDisabledClick : getRootProps().onClick}
         className={`upload-zone relative ${isDragActive ? "active" : ""} ${
           disabled ? "opacity-50 cursor-not-allowed" : ""
         }`}

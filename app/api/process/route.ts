@@ -3,6 +3,8 @@ import { put } from "@vercel/blob";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import { auth, FREE_SCENE_LIMIT } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 // Route segment config for App Router
 export const runtime = "nodejs";
@@ -20,6 +22,48 @@ function isLocalDev(): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required", message: "Please sign in to continue" },
+        { status: 401 }
+      );
+    }
+
+    // Get user from database to check usage limits
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        sceneCount: true,
+        isPaid: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Note: Email verification check removed since we only use Google OAuth,
+    // which inherently verifies email addresses
+
+    // Check usage limits for non-paid users
+    if (!user.isPaid && user.sceneCount >= FREE_SCENE_LIMIT) {
+      return NextResponse.json(
+        { 
+          error: "Usage limit reached", 
+          message: `You've used all ${FREE_SCENE_LIMIT} free scenes. Upgrade to continue.`,
+          requiresPayment: true,
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
 
@@ -88,12 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the Apple Sharp model via Modal endpoint
-    // The model generates 3D Gaussian splats (PLY format) from a single image
     console.log("Calling Modal endpoint for Sharp inference...");
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:94',message:'Calling Modal endpoint',data:{endpoint:modalEndpointUrl,imageSize:imageBase64.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
     const response = await fetch(modalEndpointUrl, {
       method: "POST",
@@ -105,17 +144,9 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:108',message:'Modal response received',data:{status:response.status,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Modal endpoint error:", errorText);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:116',message:'Modal error response',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       
       if (response.status === 503 || response.status === 502) {
         return NextResponse.json(
@@ -135,15 +166,8 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json();
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:140',message:'Modal result parsed',data:{success:result.success,hasError:!!result.error,hasPly:!!result.ply_base64},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
     if (!result.success) {
       console.error("Sharp generation failed:", result.error);
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:148',message:'Sharp generation failed',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json(
         { error: "3D generation failed", details: result.error },
         { status: 500 }
@@ -185,7 +209,19 @@ export async function POST(request: NextRequest) {
       console.log("Successfully uploaded PLY to Vercel Blob:", modelUrl);
     }
 
+    // Increment user's scene count on successful generation
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { sceneCount: { increment: 1 } },
+    });
+
     console.log("Successfully generated 3D Gaussian splats:", modelUrl);
+
+    // Get updated user info for response
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { sceneCount: true, isPaid: true },
+    });
 
     return NextResponse.json({
       success: true,
@@ -193,6 +229,13 @@ export async function POST(request: NextRequest) {
       imageUrl: imageUrl,
       modelType: "ply",
       message: "3D Gaussian splats generated successfully using Apple Sharp",
+      usage: updatedUser ? {
+        sceneCount: updatedUser.sceneCount,
+        isPaid: updatedUser.isPaid,
+        remainingUploads: updatedUser.isPaid 
+          ? null 
+          : Math.max(0, FREE_SCENE_LIMIT - updatedUser.sceneCount),
+      } : undefined,
     });
   } catch (error) {
     console.error("Processing error:", error);
@@ -251,7 +294,7 @@ export async function GET() {
     message: "Apple Sharp - Image to 3D Gaussian Splats API",
     model: "apple/Sharp (via Modal)",
     endpoints: {
-      POST: "Upload an image to convert to 3D Gaussian splats",
+      POST: "Upload an image to convert to 3D Gaussian splats (requires authentication)",
     },
     requirements: {
       MODAL_ENDPOINT_URL: "Required - Your deployed Modal endpoint URL",

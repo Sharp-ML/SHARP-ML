@@ -182,16 +182,20 @@ export default function GaussianViewer({
           if (videoAnimationRef.current.active) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-            // Subtle drift movement - stays in center zone to avoid showing edges
-            // Very slow, gentle movements that create visual interest without revealing edges
-            const driftSpeed = 0.05; // Very slow drift
-            const driftAmount = 0.15; // Small movement range
-            const baseDistance = 1.2; // Close to subject
+            // Dynamic camera movement with orbiting and panning
+            // Creates cinematic movement that showcases the 3D scene
+            const orbitSpeed = 0.15; // Orbital rotation speed
+            const panSpeed = 0.08; // Vertical pan speed
+            const driftSpeed = 0.12; // Drift variation speed
+            const baseDistance = 1.4; // Distance from center
+            const orbitRadius = 0.4; // How far to move side to side
+            const panAmount = 0.25; // Vertical movement range
             
-            // Use different frequencies for x/y to create organic Lissajous-like pattern
-            const x = Math.sin(elapsed * driftSpeed) * driftAmount;
-            const y = Math.sin(elapsed * driftSpeed * 0.7) * driftAmount * 0.5;
-            const z = -baseDistance + Math.sin(elapsed * driftSpeed * 0.5) * 0.1;
+            // Combine orbital motion with subtle drifting for organic movement
+            const orbitAngle = elapsed * orbitSpeed;
+            const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.1;
+            const y = Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.08;
+            const z = -baseDistance + Math.cos(orbitAngle * 0.5) * 0.2 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
 
             camera.position.set(x, y, z);
             camera.lookAt(0, 0, 0);
@@ -403,16 +407,20 @@ export default function GaussianViewer({
         if (videoAnimationRef.current.active) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-          // Subtle drift movement - stays in center zone to avoid showing edges
-          // Very slow, gentle movements that create visual interest without revealing edges
-          const driftSpeed = 0.05; // Very slow drift
-          const driftAmount = 0.15; // Small movement range
-          const baseDistance = 1.5; // Close to subject
+          // Dynamic camera movement with orbiting and panning
+          // Creates cinematic movement that showcases the 3D scene
+          const orbitSpeed = 0.15; // Orbital rotation speed
+          const panSpeed = 0.08; // Vertical pan speed
+          const driftSpeed = 0.12; // Drift variation speed
+          const baseDistance = 1.8; // Distance from center
+          const orbitRadius = 0.5; // How far to move side to side
+          const panAmount = 0.3; // Vertical movement range
           
-          // Use different frequencies for x/y to create organic Lissajous-like pattern
-          const x = Math.sin(elapsed * driftSpeed) * driftAmount;
-          const y = 0.8 + Math.sin(elapsed * driftSpeed * 0.7) * driftAmount * 0.5;
-          const z = baseDistance + Math.sin(elapsed * driftSpeed * 0.5) * 0.1;
+          // Combine orbital motion with subtle drifting for organic movement
+          const orbitAngle = elapsed * orbitSpeed;
+          const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.12;
+          const y = 0.8 + Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.1;
+          const z = baseDistance + Math.cos(orbitAngle * 0.5) * 0.25 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
 
           camera.position.set(x, y, z);
           camera.lookAt(0, 0, 0);

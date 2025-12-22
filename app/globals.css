@@ -484,46 +484,34 @@ body {
   height: 44px;
 }
 
-/* GitHub-style step card */
+/* Feature card - minimal centered style */
 .step-card {
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-  height: fit-content;
-  min-width: 0;
-  flex: 1;
-  align-self: stretch;
+  padding: 0;
+  text-align: center;
 }
 
-/* No hover effects on step cards */
-
 .step-card-icon {
-  width: fit-content;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
   color: var(--text-muted);
-  opacity: 0.6;
+  opacity: 0.5;
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .step-card-title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--foreground);
   letter-spacing: -0.01em;
-  margin-bottom: 2px;
-}
-
-.step-card-description {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.4;
 }
 
 /* Link hover effect */
