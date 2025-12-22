@@ -452,6 +452,10 @@ body {
   background: var(--warm-tint);
 }
 
+.no-hover:hover {
+  background: transparent;
+}
+
 .feature-card .icon-box {
   width: 44px;
   height: 44px;
