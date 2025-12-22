@@ -45,6 +45,7 @@ sharp_image = (
         "timm",
         "huggingface_hub",
         "fastapi",
+        "requests",
     )
     .run_commands(
         # Clone the Sharp repository
