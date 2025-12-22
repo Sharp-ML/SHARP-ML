@@ -45,15 +45,16 @@ sharp_image = (
         "timm",
         "huggingface_hub",
         "fastapi",
+        "requests",
     )
     .run_commands(
         # Clone the Sharp repository
         "git clone https://github.com/apple/ml-sharp.git /opt/ml-sharp",
-        # Install Sharp package
-        "cd /opt/ml-sharp && pip install -e .",
+        # Install Sharp package (use --no-deps to avoid overwriting our packages)
+        "cd /opt/ml-sharp && pip install -e . --no-deps",
+        # Verify requests is installed
+        "python -c 'import requests; print(requests.__version__)'",
     )
-    # Install requests AFTER Sharp to ensure it's not overwritten
-    .pip_install("requests")
 )
 
 # Volume to cache the model weights
