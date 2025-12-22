@@ -2,9 +2,7 @@
 
 A stunning web application that converts any image into an interactive 3D scene using Apple's SHARP model for Gaussian splatting.
 
-![SHARP 3D Preview](https://apple.github.io/ml-sharp/static/images/teaser.png)
-
-## ✨ Features
+## Features
 
 - **Google OAuth Authentication** — Secure sign-in with email verification
 - **Usage Limits & Payments** — 3 free scenes, then upgrade via Stripe
@@ -16,7 +14,7 @@ A stunning web application that converts any image into an interactive 3D scene 
 - **Responsive Design** — Works beautifully on desktop and mobile
 - **Fast Processing** — SHARP generates 3D in under a second on GPU
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -200,7 +198,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   └── stripe.ts                # Stripe client
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework** — [Next.js 16](https://nextjs.org/) with App Router
 - **Authentication** — [NextAuth.js v5](https://authjs.dev/) with Google OAuth
@@ -213,7 +211,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **ML Inference** — [Modal](https://modal.com) (serverless GPU)
 - **File Storage** — [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -224,9 +222,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `NEXTAUTH_SECRET` | Yes | Random secret for JWT signing |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret API key |
-| `STRIPE_PRICE_ID` | Yes | Stripe price ID for Pro upgrade |
-| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
 | `NEXT_PUBLIC_APP_URL` | Yes | Your app URL (for redirects) |
 | `MODAL_ENDPOINT_URL` | Yes | Your Modal Sharp endpoint URL |
 | `BLOB_READ_WRITE_TOKEN` | Yes | Auto-provided by Vercel Blob |
@@ -251,7 +246,7 @@ Modal charges ~$0.000225/second for A10G GPU. Typical costs:
 - **Warm inference**: ~1-5 seconds (~$0.0002-0.001)
 - **Idle container**: Free (scales to zero when not in use)
 
-## 📚 About the Technology
+## About the Technology
 
 This app uses [Apple SHARP](https://huggingface.co/apple/Sharp) (Sharp Monocular View Synthesis), a state-of-the-art model for generating 3D Gaussian splats from a single image.
 
@@ -273,7 +268,7 @@ This app uses [Apple SHARP](https://huggingface.co/apple/Sharp) (Sharp Monocular
 6. The 3D viewer renders the Gaussian splats in your browser
 7. Your usage count is incremented (tracked in the database)
 
-## 🔗 Links
+## Links
 
 - [Apple SHARP on Hugging Face](https://huggingface.co/apple/Sharp)
 - [Apple SHARP GitHub](https://github.com/apple/ml-sharp)
@@ -281,7 +276,7 @@ This app uses [Apple SHARP](https://huggingface.co/apple/Sharp) (Sharp Monocular
 - [SHARP arXiv Paper](https://arxiv.org/abs/2512.10685)
 - [Modal Documentation](https://modal.com/docs)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Model is loading" error
 The Modal container is starting up. This takes 30-60 seconds on cold start. Try again after waiting.
@@ -306,6 +301,6 @@ The first request after inactivity requires:
 
 Subsequent requests while the container is warm are much faster (~1-5s).
 
-## 📝 License
+## License
 
 This web interface is open source under the MIT License.
