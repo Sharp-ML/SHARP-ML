@@ -11,6 +11,7 @@ interface ProcessingStatusProps {
   status: "uploading" | "processing" | "generating" | "complete" | "error";
   progress?: number;
   errorMessage?: string;
+  stageProgress?: number; // 0-100 progress within the current stage
 }
 
 type StageId = "uploading" | "processing" | "generating" | "complete";
@@ -54,12 +55,14 @@ function StageRow({
   stage, 
   index, 
   currentIndex, 
-  status 
+  status,
+  stageProgress,
 }: { 
   stage: Stage; 
   index: number; 
   currentIndex: number; 
   status: string;
+  stageProgress?: number;
 }) {
   const isComplete = index < currentIndex;
   const isCurrent = index === currentIndex;
@@ -158,9 +161,25 @@ function StageRow({
             {stage.description}
           </p>
         )}
+        {/* Stage progress bar for processing stage */}
+        {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
+          <div className="mt-2">
+            <div className="h-1 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-[var(--foreground)]/60"
+                initial={{ width: 0 }}
+                animate={{ width: `${stageProgress}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              ~{Math.max(1, Math.round((100 - stageProgress) / 100 * 60))}s remaining
+            </p>
+          </div>
+        )}
       </div>
 
-      {isCurrent && status !== "complete" && (
+      {isCurrent && status !== "complete" && stageProgress === undefined && (
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <motion.div
@@ -176,6 +195,11 @@ function StageRow({
           ))}
         </div>
       )}
+      {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
+        <span className="text-xs font-medium text-[var(--text-muted)] tabular-nums">
+          {Math.round(stageProgress)}%
+        </span>
+      )}
     </motion.div>
   );
 }
@@ -184,6 +208,7 @@ export default function ProcessingStatus({
   status,
   progress = 0,
   errorMessage,
+  stageProgress,
 }: ProcessingStatusProps) {
   const currentIndex = stages.findIndex((s) => s.id === status);
 
@@ -194,12 +219,12 @@ export default function ProcessingStatus({
         animate={{ opacity: 1, y: 0 }}
         className="card border-[var(--error)]/20"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20">
             <AlertCircle className="w-5 h-5 text-[var(--error)]" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="font-semibold text-[var(--error)]">Processing Error</h3>
+            <h3 className="font-semibold text-[var(--error)]">Processing Failed</h3>
             <p className="text-sm text-[var(--text-muted)]">
               {errorMessage || "Something went wrong. Please try again."}
             </p>
@@ -242,6 +267,7 @@ export default function ProcessingStatus({
             index={index}
             currentIndex={currentIndex}
             status={status}
+            stageProgress={index === currentIndex ? stageProgress : undefined}
           />
         ))}
       </div>

@@ -83,6 +83,7 @@ function HomeContent() {
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
   const [progress, setProgress] = useState(0);
+  const [stageProgress, setStageProgress] = useState<number | undefined>(undefined);
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [modelType, setModelType] = useState<ModelType>("glb");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -157,6 +158,7 @@ function HomeContent() {
     setAppState("processing");
     setProcessingStage("uploading");
     setProgress(0);
+    setStageProgress(undefined);
     setError(null);
     setIsConfigError(false);
     setSetupInstructions(null);
@@ -176,11 +178,15 @@ function HomeContent() {
     };
     reader.readAsDataURL(file);
 
+    // Progress interval reference for cleanup
+    let progressInterval: NodeJS.Timeout | null = null;
+
     try {
       // Initial upload progress
       setProgress(10);
 
       setProcessingStage("processing");
+      setStageProgress(0);
 
       // Upload the file
       const formData = new FormData();
@@ -188,10 +194,31 @@ function HomeContent() {
 
       setProgress(20);
 
+      // Start progress estimation timer for the processing stage
+      // The Sharp model typically takes 30-90 seconds
+      const estimatedDuration = 60000; // 60 seconds expected
+      const startTime = Date.now();
+      progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        // Use an easing curve that slows down as it approaches 95%
+        // This creates a more realistic "waiting" feel
+        const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
+        // Apply easing: faster at start, slower as it approaches completion
+        const easedProgress = rawProgress < 50 
+          ? rawProgress 
+          : 50 + (rawProgress - 50) * 0.5;
+        setStageProgress(Math.min(95, easedProgress));
+      }, 500);
+
       const response = await fetch("/api/process", {
         method: "POST",
         body: formData,
       });
+
+      // Clear the progress timer
+      clearInterval(progressInterval);
+      progressInterval = null;
+      setStageProgress(100);
 
       setProgress(30);
 
@@ -221,6 +248,9 @@ function HomeContent() {
           : data.error || "Processing failed";
         throw new Error(errorMsg);
       }
+
+      // Clear stage progress as we move to the next stage
+      setStageProgress(undefined);
 
       // Show progress during processing (the API waits for completion)
       for (let i = 30; i <= 90; i += 10) {
@@ -261,6 +291,10 @@ function HomeContent() {
       // Update URL for sharing
       updateUrlForScene(newModelUrl, newModelType, fileName, newImageUrl);
     } catch (err) {
+      // Ensure progress timer is cleaned up on error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       console.error("Processing error:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
       setProcessingStage("error");
@@ -272,6 +306,7 @@ function HomeContent() {
     setAppState("upload");
     setProcessingStage("uploading");
     setProgress(0);
+    setStageProgress(undefined);
     setModelUrl(null);
     setModelType("glb");
     setPreviewUrl(null);
@@ -303,6 +338,10 @@ function HomeContent() {
 
   // Debug controls - only show in development
   const isDev = process.env.NODE_ENV === "development";
+  
+  // Debug state for 3D viewer
+  const [viewerDebugLoading, setViewerDebugLoading] = useState<boolean | number | undefined>(undefined);
+  const [viewerDebugError, setViewerDebugError] = useState<boolean | string | undefined>(undefined);
 
   const setDebugState = (
     state: AppState,
@@ -315,6 +354,13 @@ function HomeContent() {
     if (state === "viewing") {
       setModelUrl("/outputs/sample.glb"); // Fake URL for preview
       setModelType("glb");
+      // Start with loading state mocked so we can see the loading UI
+      setViewerDebugLoading(50);
+      setViewerDebugError(undefined);
+    } else {
+      // Reset viewer debug state when not viewing
+      setViewerDebugLoading(undefined);
+      setViewerDebugError(undefined);
     }
     if (state === "error") {
       setError("Sample error message for styling");
@@ -426,6 +472,52 @@ function HomeContent() {
               Clear History
             </button>
           </div>
+          {/* 3D Viewer Debug Controls */}
+          {appState === "viewing" && (
+            <div className="mt-2 pt-2 border-t border-white/20">
+              <div className="text-[10px] uppercase tracking-wider opacity-60 mb-2">
+                3D Viewer
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => {
+                    setViewerDebugLoading(undefined);
+                    setViewerDebugError(undefined);
+                  }}
+                  className={`px-2 py-1 rounded ${viewerDebugLoading === undefined && viewerDebugError === undefined ? "bg-white text-black" : "bg-white/20 hover:bg-white/30"}`}
+                >
+                  Normal
+                </button>
+                <button
+                  onClick={() => {
+                    setViewerDebugLoading(25);
+                    setViewerDebugError(undefined);
+                  }}
+                  className={`px-2 py-1 rounded ${viewerDebugLoading === 25 ? "bg-white text-black" : "bg-white/20 hover:bg-white/30"}`}
+                >
+                  Loading 25%
+                </button>
+                <button
+                  onClick={() => {
+                    setViewerDebugLoading(75);
+                    setViewerDebugError(undefined);
+                  }}
+                  className={`px-2 py-1 rounded ${viewerDebugLoading === 75 ? "bg-white text-black" : "bg-white/20 hover:bg-white/30"}`}
+                >
+                  Loading 75%
+                </button>
+                <button
+                  onClick={() => {
+                    setViewerDebugLoading(undefined);
+                    setViewerDebugError("Failed to load 3D model. Try again.");
+                  }}
+                  className={`px-2 py-1 rounded ${viewerDebugError !== undefined ? "bg-red-500" : "bg-red-500/50 hover:bg-red-500/70"}`}
+                >
+                  Load Error
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mt-2 pt-2 border-t border-white/20 text-[10px] opacity-50">
             Current: {appState} {appState === "processing" && `→ ${processingStage}`} | Scenes: {scenes.length}
           </div>
@@ -628,6 +720,7 @@ function HomeContent() {
                   status={processingStage}
                   progress={progress}
                   errorMessage={error || undefined}
+                  stageProgress={processingStage === "processing" ? stageProgress : undefined}
                 />
               </motion.div>
             )}
@@ -641,23 +734,24 @@ function HomeContent() {
                 className="pt-8"
               >
                 {/* Viewer header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-semibold flex items-center gap-3">
-                      <button
-                        onClick={handleReset}
-                        className="icon-btn"
-                        aria-label="Back to home"
-                      >
-                        <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-                      </button>
+                <div className="mb-6">
+                  <button
+                    onClick={handleReset}
+                    className="icon-btn mb-4 -ml-2"
+                    aria-label="Back to home"
+                  >
+                    <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+                  </button>
+                  <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h2 className="text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
                     <p className="text-[var(--text-muted)] text-sm">
                       Drag to rotate • Scroll to zoom • Click and drag to pan
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={handleShareScene}
                       className="icon-btn-label"
@@ -684,12 +778,14 @@ function HomeContent() {
                     </button>
                   </div>
                 </div>
+                </div>
 
                 {/* 3D Viewer */}
                 <GaussianViewer
                   modelUrl={modelUrl}
                   modelType={modelType}
-                  onReset={handleReset}
+                  debugLoading={viewerDebugLoading}
+                  debugError={viewerDebugError}
                 />
               </motion.div>
             )}

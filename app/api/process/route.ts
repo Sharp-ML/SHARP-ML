@@ -91,6 +91,10 @@ export async function POST(request: NextRequest) {
     // The model generates 3D Gaussian splats (PLY format) from a single image
     console.log("Calling Modal endpoint for Sharp inference...");
     
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:94',message:'Calling Modal endpoint',data:{endpoint:modalEndpointUrl,imageSize:imageBase64.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     const response = await fetch(modalEndpointUrl, {
       method: "POST",
       headers: {
@@ -101,9 +105,17 @@ export async function POST(request: NextRequest) {
       }),
     });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:108',message:'Modal response received',data:{status:response.status,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Modal endpoint error:", errorText);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:116',message:'Modal error response',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       if (response.status === 503 || response.status === 502) {
         return NextResponse.json(
@@ -123,8 +135,15 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json();
     
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:140',message:'Modal result parsed',data:{success:result.success,hasError:!!result.error,hasPly:!!result.ply_base64},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     if (!result.success) {
       console.error("Sharp generation failed:", result.error);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/0cc515e6-1119-40ab-a6a6-8f24cbdb1983',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:148',message:'Sharp generation failed',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       return NextResponse.json(
         { error: "3D generation failed", details: result.error },
         { status: 500 }

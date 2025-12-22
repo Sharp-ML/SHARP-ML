@@ -4,10 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Maximize2,
-  RotateCcw,
   Download,
   Move3D,
-  Loader2,
   MousePointer2,
 } from "lucide-react";
 import * as THREE from "three";
@@ -17,23 +15,40 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 interface GaussianViewerProps {
   modelUrl: string;
   modelType?: "ply" | "glb" | "gltf";
-  onReset?: () => void;
+  /** Debug: Force loading state with optional progress (0-100) */
+  debugLoading?: boolean | number;
+  /** Debug: Force error state with optional message */
+  debugError?: boolean | string;
 }
 
 export default function GaussianViewer({
   modelUrl,
   modelType = "glb",
-  onReset,
+  debugLoading,
+  debugError,
 }: GaussianViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingInternal, setIsLoading] = useState(true);
+  const [loadProgressInternal, setLoadProgress] = useState(0);
+  const [errorInternal, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Debug overrides
+  const isLoading = debugLoading !== undefined 
+    ? Boolean(debugLoading) 
+    : isLoadingInternal;
+  const loadProgress = typeof debugLoading === "number" 
+    ? debugLoading 
+    : loadProgressInternal;
+  const error = debugError !== undefined
+    ? (typeof debugError === "string" ? debugError : debugError ? "Debug error state" : null)
+    : errorInternal;
+
   useEffect(() => {
+    // Skip initialization in debug mode
+    if (debugLoading !== undefined || debugError !== undefined) return;
     if (!containerRef.current || !modelUrl) return;
 
     let disposed = false;
@@ -76,7 +91,7 @@ export default function GaussianViewer({
 
         const viewer = new GaussianSplats3D.Viewer({
           cameraUp: [0, -1, 0],
-          initialCameraPosition: [0, 0, 3],
+          initialCameraPosition: [0, 0, -3],
           initialCameraLookAt: [0, 0, 0],
           rootElement: containerRef.current,
           sharedMemoryForWorkers: false,
@@ -321,7 +336,7 @@ export default function GaussianViewer({
             <p className="text-lg font-medium mb-2">Loading 3D Scene</p>
             <div className="w-48 h-1.5 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-[var(--accent)] to-purple-500 rounded-full"
+                className="h-full bg-[var(--accent)] rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${loadProgress}%` }}
                 transition={{ duration: 0.3 }}
@@ -340,24 +355,12 @@ export default function GaussianViewer({
             animate={{ opacity: 1 }}
             className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--surface)]/90 backdrop-blur-sm z-10"
           >
-            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
-              <Loader2 className="w-8 h-8 text-red-400" />
-            </div>
             <p className="text-lg font-medium mb-2 text-red-400">
-              Loading Error
+              Error
             </p>
             <p className="text-sm text-[var(--text-muted)] text-center max-w-sm">
               {error}
             </p>
-            {onReset && (
-              <button
-                onClick={onReset}
-                className="mt-4 btn-secondary flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Try Again
-              </button>
-            )}
           </motion.div>
         )}
 
@@ -365,30 +368,29 @@ export default function GaussianViewer({
         {!isLoading && !error && (
           <>
             {/* Top right controls */}
-            <div className="absolute top-4 right-4 flex gap-2 z-20">
+            <div className="absolute top-4 right-4 flex gap-2 z-20 pointer-events-auto">
               <button
-                onClick={handleFullscreen}
-                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFullscreen();
+                }}
+                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
                 title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               >
                 <Maximize2 className="w-4 h-4" />
               </button>
               <button
-                onClick={handleDownload}
-                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload();
+                }}
+                className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors cursor-pointer"
                 title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
               >
                 <Download className="w-4 h-4" />
               </button>
-              {onReset && (
-                <button
-                  onClick={onReset}
-                  className="p-2.5 rounded-xl glass hover:bg-white/10 transition-colors"
-                  title="New Image"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-              )}
             </div>
 
             {/* Bottom left instructions */}
@@ -405,13 +407,6 @@ export default function GaussianViewer({
               </div>
             </div>
 
-            {/* Badge */}
-            <div className="absolute top-4 left-4 z-20">
-              <div className="glass rounded-xl px-3 py-2 flex items-center gap-2">
-                <div className="status-dot success" />
-                <span className="text-xs font-medium">Image to 3D</span>
-              </div>
-            </div>
           </>
         )}
       </div>

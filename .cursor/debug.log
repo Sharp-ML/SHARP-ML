@@ -1,0 +1,9 @@
+{"location":"route.ts:108","message":"Modal response received","data":{"status":200,"ok":true},"timestamp":1766373329306,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:140","message":"Modal result parsed","data":{"success":true,"hasError":false,"hasPly":true},"timestamp":1766373335001,"sessionId":"debug-session","hypothesisId":"C"}
+{"location":"route.ts:94","message":"Calling Modal endpoint","data":{"endpoint":"https://ginsbergj01--apple-sharp-sharpmodel-generate.modal.run","imageSize":148592},"timestamp":1766373569403,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:108","message":"Modal response received","data":{"status":200,"ok":true},"timestamp":1766373611376,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:140","message":"Modal result parsed","data":{"success":true,"hasError":false,"hasPly":true},"timestamp":1766373619558,"sessionId":"debug-session","hypothesisId":"C"}
+{"location":"route.ts:94","message":"Calling Modal endpoint","data":{"endpoint":"https://ginsbergj01--apple-sharp-sharpmodel-generate.modal.run","imageSize":4885860},"timestamp":1766374374511,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:94","message":"Calling Modal endpoint","data":{"endpoint":"https://ginsbergj01--apple-sharp-sharpmodel-generate.modal.run","imageSize":4885860},"timestamp":1766374410007,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:108","message":"Modal response received","data":{"status":200,"ok":true},"timestamp":1766374422965,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"route.ts:140","message":"Modal result parsed","data":{"success":true,"hasError":false,"hasPly":true},"timestamp":1766374427845,"sessionId":"debug-session","hypothesisId":"C"}

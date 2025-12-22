@@ -12,6 +12,13 @@ interface PixelatedImageProps {
 const PIXEL_LEVELS = [4, 8, 16, 32, 64, 128, 256];
 const STEP_DURATION = 200; // ms per step
 
+interface EdgeColors {
+  top: string;
+  bottom: string;
+  left: string;
+  right: string;
+}
+
 export default function PixelatedImage({
   src,
   alt,
@@ -19,7 +26,52 @@ export default function PixelatedImage({
 }: PixelatedImageProps) {
   const [currentLevel, setCurrentLevel] = useState(0);
   const [pixelatedImages, setPixelatedImages] = useState<string[]>([]);
+  const [edgeColors, setEdgeColors] = useState<EdgeColors | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const colorCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Extract edge colors from the image
+  const extractEdgeColors = useCallback((img: HTMLImageElement) => {
+    const canvas = colorCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Use a small canvas for sampling
+    const sampleSize = 50;
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+
+    const getAverageColor = (x: number, y: number, width: number, height: number) => {
+      const imageData = ctx.getImageData(x, y, width, height);
+      const data = imageData.data;
+      let r = 0, g = 0, b = 0, count = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+
+      r = Math.round(r / count);
+      g = Math.round(g / count);
+      b = Math.round(b / count);
+
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+
+    // Sample edges - 5px strips
+    const edgeWidth = 5;
+    setEdgeColors({
+      top: getAverageColor(0, 0, sampleSize, edgeWidth),
+      bottom: getAverageColor(0, sampleSize - edgeWidth, sampleSize, edgeWidth),
+      left: getAverageColor(0, 0, edgeWidth, sampleSize),
+      right: getAverageColor(sampleSize - edgeWidth, 0, edgeWidth, sampleSize),
+    });
+  }, []);
 
   // Generate pixelated versions of the image
   const generatePixelatedVersions = useCallback((img: HTMLImageElement) => {
@@ -71,6 +123,7 @@ export default function PixelatedImage({
     img.crossOrigin = "anonymous";
 
     img.onload = () => {
+      extractEdgeColors(img);
       generatePixelatedVersions(img);
     };
 
@@ -79,7 +132,7 @@ export default function PixelatedImage({
     return () => {
       img.onload = null;
     };
-  }, [src, generatePixelatedVersions]);
+  }, [src, generatePixelatedVersions, extractEdgeColors]);
 
   // Animate through pixel levels once images are ready
   useEffect(() => {
@@ -98,6 +151,7 @@ export default function PixelatedImage({
   useEffect(() => {
     setCurrentLevel(0);
     setPixelatedImages([]);
+    setEdgeColors(null);
   }, [src]);
 
   const showOriginal = currentLevel >= PIXEL_LEVELS.length;
@@ -107,8 +161,10 @@ export default function PixelatedImage({
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {/* Hidden canvas for generating pixelated versions */}
+      {/* Hidden canvases for processing */}
       <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={colorCanvasRef} className="hidden" />
+
 
       {/* Current pixelated level - always show if available */}
       {displayImage && !showOriginal && (
@@ -138,6 +194,36 @@ export default function PixelatedImage({
           className="w-full h-full object-cover"
         />
       </div>
+
+      {/* Gradient blur edges */}
+      {edgeColors && (
+        <>
+          <div 
+            className="absolute inset-x-0 top-0 h-8 pointer-events-none"
+            style={{ 
+              background: `linear-gradient(to bottom, ${edgeColors.top}, transparent)`,
+            }}
+          />
+          <div 
+            className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
+            style={{ 
+              background: `linear-gradient(to top, ${edgeColors.bottom}, transparent)`,
+            }}
+          />
+          <div 
+            className="absolute inset-y-0 left-0 w-8 pointer-events-none"
+            style={{ 
+              background: `linear-gradient(to right, ${edgeColors.left}, transparent)`,
+            }}
+          />
+          <div 
+            className="absolute inset-y-0 right-0 w-8 pointer-events-none"
+            style={{ 
+              background: `linear-gradient(to left, ${edgeColors.right}, transparent)`,
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
