@@ -28,7 +28,7 @@ import { AuthGate } from "./components/AuthGate";
 import { signOut } from "next-auth/react";
 import { UpgradeModal } from "./components/UpgradeModal";
 
-const FREE_SCENE_LIMIT = 3;
+const FREE_SCENE_LIMIT = 10;
 
 type AppState = "upload" | "processing" | "viewing" | "error";
 type ProcessingStage =

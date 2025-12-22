@@ -1,9 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStripe, UNLIMITED_ACCESS_PRICE } from "@/lib/stripe";
 
-export async function POST() {
+function getBaseUrl(request: NextRequest): string {
+  // First check explicit env var
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  // On Vercel, use the deployment URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Fallback: derive from request headers
+  const host = request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto") || "https";
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+  
+  // Final fallback for local development
+  return "http://localhost:3000";
+}
+
+export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -60,6 +82,7 @@ export async function POST() {
     }
 
     // Create checkout session for subscription
+    const baseUrl = getBaseUrl(request);
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -70,8 +93,8 @@ export async function POST() {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?payment=cancelled`,
+      success_url: `${baseUrl}?payment=success`,
+      cancel_url: `${baseUrl}?payment=cancelled`,
       metadata: {
         userId: session.user.id,
       },

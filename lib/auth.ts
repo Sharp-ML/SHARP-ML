@@ -4,7 +4,7 @@ import Google from "next-auth/providers/google";
 import { prisma } from "./prisma";
 
 // Free tier limit
-export const FREE_SCENE_LIMIT = 3;
+export const FREE_SCENE_LIMIT = 10;
 
 // Check if we have all required env vars for auth
 const hasAuthConfig = 
