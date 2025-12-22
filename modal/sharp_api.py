@@ -25,6 +25,7 @@ app = modal.App("apple-sharp")
 # Define the container image with all dependencies
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
+    .env({"IMAGE_VERSION": "2"})  # Force rebuild when dependencies change
     .apt_install(
         "git",
         "wget",
