@@ -16,6 +16,9 @@ import {
   Share2,
   Check,
   Sparkles,
+  HelpCircle,
+  LogOut,
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import ImageUpload from "./components/ImageUpload";
@@ -110,6 +113,23 @@ function HomeContent() {
   // Usage tracking state
   const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const helpMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close help menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+        setShowHelpMenu(false);
+      }
+    }
+    if (showHelpMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showHelpMenu]);
 
   // Scene history persistence
   const {
@@ -991,12 +1011,48 @@ function HomeContent() {
               <Github className="w-4 h-4" strokeWidth={1.5} />
               <span>GitHub</span>
             </a>
-            <button
-              onClick={() => signOut()}
-              className="text-link cursor-pointer"
-            >
-              Log out
-            </button>
+            <div className="relative" ref={helpMenuRef}>
+              <button
+                onClick={() => setShowHelpMenu(!showHelpMenu)}
+                className="text-link cursor-pointer p-1 hover:bg-[var(--foreground)]/10 rounded-full transition-colors"
+                aria-label="Help menu"
+              >
+                <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+              <AnimatePresence>
+                {showHelpMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    style={{ transformOrigin: "bottom right" }}
+                    className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
+                  >
+                    <a
+                      href="https://x.com/JasonBud"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md"
+                      onClick={() => setShowHelpMenu(false)}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span>Contact Support</span>
+                    </a>
+                    <button
+                      onClick={() => {
+                        setShowHelpMenu(false);
+                        signOut();
+                      }}
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md w-full text-left cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span>Log out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </footer>

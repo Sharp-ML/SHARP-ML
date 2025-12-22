@@ -23,7 +23,7 @@ from pathlib import Path
 app = modal.App("apple-sharp")
 
 # Define the container image with all dependencies
-# IMPORTANT: Install requests AFTER Sharp to prevent dependency conflicts
+# IMAGE_VERSION: v10-20241221 - Complete ml-sharp dependencies
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -34,31 +34,48 @@ sharp_image = (
         "libsm6",
         "libxext6",
         "libxrender-dev",
+        "ffmpeg",
+        # Additional libs for opencv and open3d
+        "libgomp1",
     )
+    # Install ALL required packages explicitly (from ml-sharp requirements.txt)
     .pip_install(
+        # Core ML packages
         "torch>=2.0.0",
         "torchvision",
-        "numpy",
-        "Pillow",
+        "numpy<2",  # ml-sharp requires numpy<2
+        "Pillow>=9.0",
+        # Sharp dependencies from requirements.txt
+        "scipy>=1.11.0",
+        "imageio>=2.31.0",
         "plyfile",
         "tqdm",
         "einops",
         "timm",
         "huggingface_hub",
+        "pillow_heif",  # HEIF/HEIC image support
+        "matplotlib",  # For sharp.utils.vis
+        "opencv-python-headless",  # For image processing (headless for server)
+        "trimesh",  # For 3D mesh operations
+        "open3d",  # For 3D point cloud operations
+        "safetensors",  # For model weight loading
+        "moviepy==1.0.3",  # For video processing
+        "e3nn",  # For equivariant neural networks
+        "omegaconf",  # For configuration management
+        "gsplat",  # Critical: Gaussian splatting library
+        # API dependencies
         "fastapi",
+        "requests>=2.31.0",
     )
     .run_commands(
         # Clone the Sharp repository
         "git clone https://github.com/apple/ml-sharp.git /opt/ml-sharp",
-        # Install Sharp package (use --no-deps to avoid overwriting our packages)
+        # Install Sharp package (no-deps since we've installed everything)
         "cd /opt/ml-sharp && pip install -e . --no-deps",
-    )
-    # Install requests AFTER Sharp to ensure it's available at runtime
-    # force_build=True ensures this layer is rebuilt fresh
-    .pip_install("requests", force_build=True)
-    .run_commands(
-        # Verify requests is installed and available
-        "python -c 'import requests; print(\"requests version:\", requests.__version__)'",
+        # Verify all key imports work
+        "python -c 'from sharp.cli import main_cli; import requests; import imageio; print(\"All Sharp imports OK\")'",
+        # Force cache bust
+        "echo 'Image built: 2024-12-21-v10-complete-deps'",
     )
 )
 
@@ -70,7 +87,7 @@ MODEL_CACHE_PATH = "/cache/models"
 
 @app.cls(
     image=sharp_image,
-    gpu="H100",  # Use H100 GPU for good performance/cost ratio
+    gpu="H100",  # Use H100 GPU for best performance
     timeout=300,  # 5 minute timeout
     volumes={MODEL_CACHE_PATH: model_cache},
     scaledown_window=300,  # Keep container warm for 5 minutes
@@ -203,8 +220,8 @@ class SharpModel:
                     "error": "No image provided. Send 'image' (base64) or 'image_url'."
                 }
             
-            # Run prediction
-            ply_bytes = self.predict(image_bytes)
+            # Run prediction - use .local() to call the Modal method from within the class
+            ply_bytes = self.predict.local(image_bytes)
             
             # Encode result as base64
             ply_base64 = base64.b64encode(ply_bytes).decode("utf-8")
