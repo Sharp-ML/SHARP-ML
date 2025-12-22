@@ -701,9 +701,9 @@ function HomeContent() {
                   ) : (
                     // Features - minimal centered style
                     <div className="flex items-start justify-center gap-8 py-4">
-                      {/* 3 Free scenes */}
+                      {/* 10 Free scenes */}
                       <div className="step-card">
-                        <div className="step-card-icon">3</div>
+                        <div className="step-card-icon">${FREE_SCENE_LIMIT}</div>
                         <div className="step-card-title">Free scenes</div>
                       </div>
 

@@ -296,7 +296,7 @@ Check that:
 Make sure you're signed in with Google. The app requires authentication to protect against abuse.
 
 ### "Usage limit reached" error
-You've used all 3 free scenes. Click the upgrade button to purchase unlimited access.
+You've used all 10 free scenes. Click the upgrade button to purchase unlimited access.
 
 ### Slow first request
 The first request after inactivity requires:
