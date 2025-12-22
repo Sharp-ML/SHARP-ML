@@ -26,24 +26,33 @@ const authConfig = hasAuthConfig ? {
       if (session.user) {
         session.user.id = user.id;
         
-        // Get fresh user data for usage tracking
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: {
-            sceneCount: true,
-            isPaid: true,
-            emailVerified: true,
-          },
-        });
-        
-        if (dbUser) {
-          session.user.sceneCount = dbUser.sceneCount;
-          session.user.isPaid = dbUser.isPaid;
-          session.user.emailVerified = dbUser.emailVerified;
-          session.user.canUpload = dbUser.isPaid || dbUser.sceneCount < FREE_SCENE_LIMIT;
-          session.user.remainingUploads = dbUser.isPaid 
-            ? Infinity 
-            : Math.max(0, FREE_SCENE_LIMIT - dbUser.sceneCount);
+        try {
+          // Get fresh user data for usage tracking
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              sceneCount: true,
+              isPaid: true,
+              emailVerified: true,
+            },
+          });
+          
+          if (dbUser) {
+            session.user.sceneCount = dbUser.sceneCount;
+            session.user.isPaid = dbUser.isPaid;
+            session.user.emailVerified = dbUser.emailVerified;
+            session.user.canUpload = dbUser.isPaid || dbUser.sceneCount < FREE_SCENE_LIMIT;
+            session.user.remainingUploads = dbUser.isPaid 
+              ? Infinity 
+              : Math.max(0, FREE_SCENE_LIMIT - dbUser.sceneCount);
+          }
+        } catch (error) {
+          // Log error but don't crash session - use defaults
+          console.error("Error fetching user data for session:", error);
+          session.user.sceneCount = 0;
+          session.user.isPaid = false;
+          session.user.canUpload = true;
+          session.user.remainingUploads = FREE_SCENE_LIMIT;
         }
       }
       return session;
@@ -51,10 +60,15 @@ const authConfig = hasAuthConfig ? {
   },
   pages: {
     signIn: "/", // Use the main page for sign in
+    error: "/auth/error", // Custom error page that matches site style
   },
   trustHost: true,
 } : {
   providers: [],
+  pages: {
+    signIn: "/",
+    error: "/auth/error",
+  },
   trustHost: true,
 };
 
