@@ -430,6 +430,9 @@ function HomeContent() {
   // Debug state for 3D viewer
   const [viewerDebugLoading, setViewerDebugLoading] = useState<boolean | number | undefined>(undefined);
   const [viewerDebugError, setViewerDebugError] = useState<boolean | string | undefined>(undefined);
+  
+  // Hover preview state for recent scenes
+  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
 
   const setDebugState = (
     state: AppState,
@@ -655,9 +658,11 @@ function HomeContent() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
-                    className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1"
+                    className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-2"
                   >
-                    Image to 3D
+                    <span>2D</span>
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <span>3D</span>
                   </motion.h1>
 
                   <motion.p
@@ -715,18 +720,33 @@ function HomeContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                             onClick={() => handleSelectScene(scene)}
+                            onMouseEnter={() => setHoveredSceneId(scene.id)}
+                            onMouseLeave={() => setHoveredSceneId(null)}
                             className="group flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
-                            {/* Thumbnail */}
+                            {/* Thumbnail with 3D preview on hover */}
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
+                              {/* Static image preview */}
                               <Image
                                 src={scene.previewUrl}
                                 alt={scene.name}
                                 fill
-                                className="object-cover"
+                                className={`object-cover transition-opacity duration-200 ${
+                                  hoveredSceneId === scene.id ? "opacity-0" : "opacity-100"
+                                }`}
                                 unoptimized
                               />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                              {/* Interactive 3D preview on hover */}
+                              {hoveredSceneId === scene.id && (
+                                <div className="absolute inset-0">
+                                  <GaussianViewer
+                                    modelUrl={scene.modelUrl}
+                                    modelType={scene.modelType}
+                                    mini
+                                  />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
                             </div>
 
                             {/* Info */}
@@ -763,7 +783,7 @@ function HomeContent() {
                     </div>
                   ) : (
                     // Features - minimal centered style
-                    <div className="flex items-start justify-center gap-16 sm:gap-24 py-4">
+                    <div className="flex items-start justify-center gap-8 py-4">
                       {/* 3 Free scenes */}
                       <div className="step-card">
                         <div className="step-card-icon">3</div>

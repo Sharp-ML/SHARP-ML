@@ -20,7 +20,6 @@ export async function POST() {
       select: { 
         stripeCustomerId: true, 
         isPaid: true,
-        emailVerified: true,
       },
     });
 
@@ -28,14 +27,6 @@ export async function POST() {
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
-      );
-    }
-
-    // Require email verification before payment
-    if (!user.emailVerified) {
-      return NextResponse.json(
-        { error: "Please verify your email first" },
-        { status: 403 }
       );
     }
 
@@ -68,10 +59,10 @@ export async function POST() {
       });
     }
 
-    // Create checkout session for one-time payment
+    // Create checkout session for subscription
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
-      mode: "payment",
+      mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
         {

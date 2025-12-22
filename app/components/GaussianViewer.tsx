@@ -25,6 +25,8 @@ interface GaussianViewerProps {
   debugLoading?: boolean | number;
   /** Debug: Force error state with optional message */
   debugError?: boolean | string;
+  /** Mini mode: auto-rotate, no controls, no overlays - for small previews */
+  mini?: boolean;
 }
 
 export default function GaussianViewer({
@@ -32,6 +34,7 @@ export default function GaussianViewer({
   modelType = "glb",
   debugLoading,
   debugError,
+  mini = false,
 }: GaussianViewerProps) {
   const sceneContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,23 +128,25 @@ export default function GaussianViewer({
         controls.enableDamping = true;
         controls.dampingFactor = 0.1; // Smoother damping
         controls.rotateSpeed = 0.8; // Slightly slower for precision
-        controls.enableZoom = true;
+        controls.enableZoom = !mini;
         controls.zoomSpeed = 1.2;
         controls.minDistance = 0.5; // Prevent zooming too close
         controls.maxDistance = 10; // Prevent zooming too far
-        controls.enablePan = true; // Enable panning with right-click or shift+drag
+        controls.enablePan = !mini; // Disable panning in mini mode
         controls.panSpeed = 0.8;
         controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
-        controls.autoRotate = false;
+        controls.autoRotate = mini; // Auto-rotate in mini mode
+        controls.autoRotateSpeed = 4.0; // Faster rotation for mini preview
         controls.target.set(0, 0, 0);
         // Limit vertical rotation to prevent disorientation
         controls.minPolarAngle = 0.1; // Prevent going fully overhead
         controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
-        // Enable touch controls
-        controls.touches = {
+        // Enable touch controls (disabled in mini mode)
+        controls.touches = mini ? { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.ROTATE } : {
           ONE: THREE.TOUCH.ROTATE,
           TWO: THREE.TOUCH.DOLLY_PAN,
         };
+        controls.enabled = !mini; // Disable manual controls in mini mode
         controlsRef.current = controls;
 
         // Create viewer with our renderer and camera, manual mode
@@ -179,7 +184,7 @@ export default function GaussianViewer({
           animationFrameId = requestAnimationFrame(animate);
           
           // Check if we're in video mode
-          if (videoAnimationRef.current.active) {
+          if (videoAnimationRef.current.active && !mini) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
             // Dynamic camera movement with orbiting and panning
@@ -201,7 +206,7 @@ export default function GaussianViewer({
             camera.lookAt(0, 0, 0);
 
             controls.enabled = false;
-          } else {
+          } else if (!mini) {
             controls.enabled = true;
             
             // Apply WASD keyboard controls
@@ -250,9 +255,10 @@ export default function GaussianViewer({
                 controls.target.y += moveSpeed;
               }
             }
-            
-            controls.update();
           }
+          
+          // Always update controls (for autoRotate in mini mode)
+          controls.update();
           
           // Update and render the Gaussian splats
           viewer.update();
@@ -310,23 +316,24 @@ export default function GaussianViewer({
       controls.enableDamping = true;
       controls.dampingFactor = 0.1; // Smoother damping
       controls.rotateSpeed = 0.8; // Slightly slower for precision
-      controls.enableZoom = true;
+      controls.enableZoom = !mini;
       controls.zoomSpeed = 1.2;
       controls.minDistance = 0.5; // Prevent zooming too close
       controls.maxDistance = 15; // Prevent zooming too far
-      controls.enablePan = true; // Enable panning with right-click or shift+drag
+      controls.enablePan = !mini; // Disable panning in mini mode
       controls.panSpeed = 0.8;
       controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
-      controls.autoRotate = false;
-      controls.autoRotateSpeed = 1.0;
+      controls.autoRotate = mini; // Auto-rotate in mini mode
+      controls.autoRotateSpeed = 4.0; // Faster rotation for mini preview
       // Limit vertical rotation to prevent disorientation
       controls.minPolarAngle = 0.1; // Prevent going fully overhead
       controls.maxPolarAngle = Math.PI - 0.1; // Prevent going fully under
-      // Enable touch controls
-      controls.touches = {
+      // Enable touch controls (disabled in mini mode)
+      controls.touches = mini ? { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.ROTATE } : {
         ONE: THREE.TOUCH.ROTATE,
         TWO: THREE.TOUCH.DOLLY_PAN,
       };
+      controls.enabled = !mini; // Disable manual controls in mini mode
       controlsRef.current = controls;
 
       // Add lights
@@ -404,7 +411,7 @@ export default function GaussianViewer({
         animationFrameId = requestAnimationFrame(animate);
         
         // Check if we're in video mode
-        if (videoAnimationRef.current.active) {
+        if (videoAnimationRef.current.active && !mini) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
           // Dynamic camera movement with orbiting and panning
@@ -427,7 +434,7 @@ export default function GaussianViewer({
 
           // Disable controls in video mode
           controls.enabled = false;
-        } else {
+        } else if (!mini) {
           controls.enabled = true;
           
           // Apply WASD keyboard controls
@@ -476,9 +483,10 @@ export default function GaussianViewer({
               controls.target.y += moveSpeed;
             }
           }
-          
-          controls.update();
         }
+        
+        // Always update controls (for autoRotate in mini mode)
+        controls.update();
         
         renderer.render(scene, camera);
       };
@@ -530,7 +538,7 @@ export default function GaussianViewer({
       rendererRef.current = null;
       controlsRef.current = null;
     };
-  }, [modelUrl, modelType]);
+  }, [modelUrl, modelType, mini]);
 
   const handleExpand = () => {
     setIsExpanded(true);
@@ -678,25 +686,27 @@ export default function GaussianViewer({
         transition={{ duration: 0.5 }}
         className="w-full"
       >
-        {/* Scene container - becomes modal when expanded */}
+        {/* Scene container - becomes modal when expanded, fills parent in mini mode */}
         <div
           ref={sceneContainerRef}
           className={`scene-container overflow-hidden ${
-            isExpanded
-              ? "expanded z-50"
-              : "relative w-full aspect-[16/10]"
+            mini
+              ? "absolute inset-0"
+              : isExpanded
+                ? "expanded z-50"
+                : "relative w-full aspect-[16/10]"
           }`}
         >
           {/* Viewer container - scales up in video mode to crop edge artifacts */}
           <div
             ref={containerRef}
             className={`absolute inset-0 transition-transform duration-500 ${
-              viewMode === "video" ? "scale-[2.5]" : "scale-100"
+              viewMode === "video" && !mini ? "scale-[2.5]" : "scale-100"
             }`}
           />
 
-          {/* Loading overlay */}
-          {isLoading && (
+          {/* Loading overlay - hidden in mini mode */}
+          {isLoading && !mini && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -722,9 +732,16 @@ export default function GaussianViewer({
               </p>
             </motion.div>
           )}
+          
+          {/* Mini loading spinner */}
+          {isLoading && mini && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface-elevated)]">
+              <div className="w-4 h-4 rounded-full border-2 border-[var(--text-muted)] border-t-transparent animate-spin" />
+            </div>
+          )}
 
-          {/* Error overlay */}
-          {error && (
+          {/* Error overlay - hidden in mini mode */}
+          {error && !mini && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -741,8 +758,8 @@ export default function GaussianViewer({
             </motion.div>
           )}
 
-          {/* Controls overlay */}
-          {!isLoading && !error && (
+          {/* Controls overlay - hidden in mini mode */}
+          {!isLoading && !error && !mini && (
             <>
               {/* Top right controls */}
               <div className={`absolute z-20 pointer-events-auto flex gap-2 ${

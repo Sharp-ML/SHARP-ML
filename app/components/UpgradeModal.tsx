@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Check, Loader2, AlertCircle } from "lucide-react";
+import { X, Zap, Infinity, Share2, Loader2 } from "lucide-react";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -12,11 +12,21 @@ interface UpgradeModalProps {
 }
 
 const FEATURES = [
-  "Unlimited 3D scene generation",
-  "Priority processing",
-  "High-resolution exports",
-  "Share scenes with anyone",
-  "Access to new features",
+  {
+    icon: Infinity,
+    title: "Unlimited Scenes",
+    description: "Generate as many 3D scenes as you want",
+  },
+  {
+    icon: Zap,
+    title: "Priority Processing",
+    description: "Your renders get processed first",
+  },
+  {
+    icon: Share2,
+    title: "Share & Export",
+    description: "High-res exports and shareable links",
+  },
 ];
 
 export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModalProps) {
@@ -38,7 +48,6 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
         throw new Error(data.error || "Failed to create checkout session");
       }
 
-      // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
       }
@@ -57,7 +66,7 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
@@ -66,97 +75,95 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50 p-4"
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] z-50 p-4"
           >
-            <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
               {/* Header */}
-              <div className="relative bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-orange-500/20 p-6 pb-8">
+              <div className="flex items-center justify-between px-5 pt-4 pb-1">
+                <h2 className="text-lg font-semibold text-gray-900">Upgrade to Pro</h2>
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-gray-400" />
                 </button>
-
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold">Upgrade to Pro</h2>
-                    <p className="text-sm text-[var(--text-muted)]">
-                      Unlock unlimited 3D scenes
-                    </p>
-                  </div>
-                </div>
-
-                {/* Usage indicator */}
-                <div className="bg-[var(--surface)]/80 backdrop-blur rounded-xl p-4 border border-[var(--border)]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[var(--text-muted)]">Scenes used</span>
-                    <span className="text-sm font-medium">
-                      {sceneCount} / {limit}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (sceneCount / limit) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)] mt-2">
-                    {sceneCount >= limit
-                      ? "You've reached your free limit"
-                      : `${limit - sceneCount} free scenes remaining`}
-                  </p>
-                </div>
               </div>
 
-              {/* Features */}
-              <div className="p-6">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-4">
-                  What you&apos;ll get
-                </h3>
-                <ul className="space-y-3 mb-6">
-                  {FEATURES.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-3">
-                      <div className="p-1 rounded-full bg-green-500/10">
-                        <Check className="w-3 h-3 text-green-500" />
-                      </div>
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Error message */}
-                {error && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-500">{error}</p>
-                  </div>
-                )}
-
-                {/* CTA */}
+              {/* Content */}
+              <div className="px-5 pb-5">
+                {/* Primary CTA Button */}
                 <button
                   onClick={handleUpgrade}
                   disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#2196F3] hover:bg-[#1E88E5] text-white font-semibold text-base transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 mt-3 shadow-lg shadow-blue-500/25"
                 >
-                  {isLoading ? (
+                {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       Processing...
                     </>
                   ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Upgrade Now
-                    </>
+                    "Upgrade Now"
                   )}
                 </button>
 
-                <p className="text-xs text-[var(--text-muted)] text-center mt-4">
-                  One-time payment • Secure checkout via Stripe
+                {/* Error message */}
+                {error && (
+                  <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100">
+                    <p className="text-sm text-red-600 text-center">{error}</p>
+                  </div>
+                )}
+
+                {/* Divider text */}
+                <p className="text-center text-gray-400 text-sm my-4">
+                  or see what&apos;s included
+                </p>
+
+                {/* Feature cards */}
+                <div className="space-y-2">
+                  {FEATURES.map((feature, index) => {
+                    const Icon = feature.icon;
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+                      >
+                        <div>
+                          <h3 className="font-medium text-gray-900 text-sm">
+                            {feature.title}
+                          </h3>
+                          <p className="text-gray-500 text-xs">
+                            {feature.description}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 ml-3">
+                          <Icon className="w-5 h-5 text-[#2196F3]" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Usage info */}
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-gray-500">Your usage</span>
+                    <span className="text-xs font-medium text-gray-700">
+                      {sceneCount} / {limit} scenes
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#2196F3] rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, (sceneCount / limit) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Footer text */}
+                <p className="text-center text-gray-400 text-xs mt-4">
+                  One-time payment • Secure checkout
                 </p>
               </div>
             </div>
