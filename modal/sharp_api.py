@@ -23,7 +23,6 @@ from pathlib import Path
 app = modal.App("apple-sharp")
 
 # Define the container image with all dependencies
-# IMPORTANT: Install requests AFTER Sharp to prevent dependency conflicts
 sharp_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -46,18 +45,14 @@ sharp_image = (
         "timm",
         "huggingface_hub",
         "fastapi",
+        "requests",  # Required for downloading images from URLs
     )
     .run_commands(
         # Clone the Sharp repository
         "git clone https://github.com/apple/ml-sharp.git /opt/ml-sharp",
         # Install Sharp package (use --no-deps to avoid overwriting our packages)
         "cd /opt/ml-sharp && pip install -e . --no-deps",
-    )
-    # Install requests AFTER Sharp to ensure it's available at runtime
-    # force_build=True ensures this layer is rebuilt fresh
-    .pip_install("requests", force_build=True)
-    .run_commands(
-        # Verify requests is installed and available
+        # Verify requests is still available after Sharp installation
         "python -c 'import requests; print(\"requests version:\", requests.__version__)'",
     )
 )
