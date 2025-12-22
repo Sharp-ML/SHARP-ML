@@ -13,8 +13,6 @@ import {
   Clock,
   Trash2,
   ChevronRight,
-  Share2,
-  Check,
   Sparkles,
   HelpCircle,
   LogOut,
@@ -55,7 +53,8 @@ interface UserUsage {
   remainingUploads: number | null;
 }
 
-function formatRelativeTime(timestamp: number): string {
+function formatRelativeTime(dateInput: string | number): string {
+  const timestamp = typeof dateInput === "string" ? new Date(dateInput).getTime() : dateInput;
   const now = Date.now();
   const diff = now - timestamp;
   const minutes = Math.floor(diff / 60000);
@@ -108,7 +107,6 @@ function HomeContent() {
   const [setupInstructions, setSetupInstructions] =
     useState<SetupInstructions | null>(null);
   const [currentSceneName, setCurrentSceneName] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Usage tracking state
   const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
@@ -131,19 +129,14 @@ function HomeContent() {
     };
   }, [showHelpMenu]);
 
-  // Scene history persistence
+  // Scene history persistence (from authenticated API)
   const {
     scenes,
     isLoaded: historyLoaded,
-    addScene,
+    refreshScenes,
     removeScene,
     clearAllScenes,
   } = useScenesHistory();
-
-  // Ref to store the current file's data URL for saving
-  const currentPreviewDataUrl = useRef<string | null>(null);
-  // Ref to store the image URL from API for saving
-  const currentImageUrl = useRef<string | null>(null);
 
   // Fetch user usage data on mount and after session changes
   useEffect(() => {
@@ -183,50 +176,8 @@ function HomeContent() {
     }
   }, [searchParams, router, updateSession]);
 
-  // Parse URL parameters on mount to load shared scene
-  useEffect(() => {
-    const model = searchParams.get("model");
-    const type = searchParams.get("type") as ModelType | null;
-    const name = searchParams.get("name");
-    const preview = searchParams.get("preview");
-
-    if (model) {
-      setModelUrl(model);
-      setModelType(type || "glb");
-      setCurrentSceneName(name ? decodeURIComponent(name) : "Shared Scene");
-      setPreviewUrl(preview || null);
-      setImageUrl(preview || null);
-      setAppState("viewing");
-    }
-  }, [searchParams]);
-
-  // Update URL when viewing a scene
-  const updateUrlForScene = useCallback((
-    sceneModelUrl: string,
-    sceneModelType: ModelType,
-    sceneName: string | null,
-    sceneImageUrl: string | null
-  ) => {
-    const params = new URLSearchParams();
-    params.set("model", sceneModelUrl);
-    params.set("type", sceneModelType);
-    if (sceneName) {
-      params.set("name", encodeURIComponent(sceneName));
-    }
-    if (sceneImageUrl) {
-      params.set("preview", sceneImageUrl);
-    }
-    router.replace(`?${params.toString()}`, { scroll: false });
-  }, [router]);
-
-  // Copy share link to clipboard
-  const handleShareScene = useCallback(() => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, []);
+  // Note: URL-based scene sharing has been removed for security.
+  // Users can only access their own scenes stored in localStorage.
 
   // Check if user can upload
   const canUpload = userUsage?.isPaid || (userUsage?.remainingUploads ?? FREE_SCENE_LIMIT) > 0;
@@ -253,13 +204,6 @@ function HomeContent() {
     // Store the file name for later
     const fileName = file.name.replace(/\.[^/.]+$/, "") || "Scene";
     setCurrentSceneName(fileName);
-
-    // Read file as data URL for saving to history
-    const reader = new FileReader();
-    reader.onload = () => {
-      currentPreviewDataUrl.current = reader.result as string;
-    };
-    reader.readAsDataURL(file);
 
     // Progress interval reference for cleanup
     let progressInterval: NodeJS.Timeout | null = null;
@@ -369,7 +313,6 @@ function HomeContent() {
       setModelUrl(newModelUrl);
       setModelType(newModelType);
       setImageUrl(newImageUrl);
-      currentImageUrl.current = newImageUrl;
 
       // Update usage from response
       if (data.usage) {
@@ -380,23 +323,12 @@ function HomeContent() {
         });
       }
 
-      // Save to history if we have the preview data URL
-      if (currentPreviewDataUrl.current) {
-        addScene({
-          name: fileName,
-          previewUrl: currentPreviewDataUrl.current,
-          imageUrl: newImageUrl, // Store Vercel Blob URL for sharing
-          modelUrl: newModelUrl,
-          modelType: newModelType,
-        });
-      }
+      // Refresh scenes list from server (scene was already created by the API)
+      await refreshScenes();
 
       // Wait a moment before showing the viewer
       await new Promise((r) => setTimeout(r, 500));
       setAppState("viewing");
-      
-      // Update URL for sharing
-      updateUrlForScene(newModelUrl, newModelType, fileName, newImageUrl);
     } catch (err) {
       // Ensure progress timer is cleaned up on error
       if (progressInterval) {
@@ -407,7 +339,7 @@ function HomeContent() {
       setProcessingStage("error");
       setAppState("error");
     }
-  }, [addScene, updateUrlForScene, canUpload]);
+  }, [refreshScenes, canUpload]);
 
   const handleReset = useCallback(() => {
     setAppState("upload");
@@ -422,8 +354,6 @@ function HomeContent() {
     setIsConfigError(false);
     setSetupInstructions(null);
     setCurrentSceneName(null);
-    currentPreviewDataUrl.current = null;
-    currentImageUrl.current = null;
     // Clear URL parameters
     router.replace("/", { scroll: false });
   }, [router]);
@@ -432,16 +362,13 @@ function HomeContent() {
   const handleSelectScene = useCallback((scene: SavedScene) => {
     setModelUrl(scene.modelUrl);
     setModelType(scene.modelType);
-    setPreviewUrl(scene.previewUrl);
-    setImageUrl(scene.imageUrl || null);
+    setPreviewUrl(scene.imageUrl); // Use imageUrl as preview (from Vercel Blob)
+    setImageUrl(scene.imageUrl);
     setCurrentSceneName(scene.name);
     setAppState("viewing");
     setError(null);
     setIsConfigError(false);
-    // Update URL for sharing (use imageUrl for preview if available, else previewUrl if it's not base64)
-    const shareablePreview = scene.imageUrl || (scene.previewUrl.startsWith("http") ? scene.previewUrl : null);
-    updateUrlForScene(scene.modelUrl, scene.modelType, scene.name, shareablePreview);
-  }, [updateUrlForScene]);
+  }, []);
 
   // Debug controls - only show in development
   const isDev = process.env.NODE_ENV === "development";
@@ -492,23 +419,9 @@ function HomeContent() {
     });
   };
 
-  // Add mock scenes for debugging
-  const addMockScenes = () => {
-    const mockImages = [
-      "https://picsum.photos/seed/scene1/400/300",
-      "https://picsum.photos/seed/scene2/400/300",
-      "https://picsum.photos/seed/scene3/400/300",
-    ];
-    const mockNames = ["Mountain Vista", "Ocean Sunset", "City Skyline"];
-    
-    mockNames.forEach((name, i) => {
-      addScene({
-        name,
-        previewUrl: mockImages[i],
-        modelUrl: `/outputs/mock-${i}.glb`,
-        modelType: "glb",
-      });
-    });
+  // Refresh scenes from server (for debugging)
+  const handleRefreshScenes = async () => {
+    await refreshScenes();
   };
 
   return (
@@ -591,10 +504,10 @@ function HomeContent() {
           </div>
           <div className="mt-2 pt-2 border-t border-white/20 flex flex-wrap gap-1.5">
             <button
-              onClick={addMockScenes}
+              onClick={handleRefreshScenes}
               className="px-2 py-1 rounded bg-blue-500/50 hover:bg-blue-500/70"
             >
-              + Mock Scenes
+              Refresh Scenes
             </button>
             <button
               onClick={clearAllScenes}
@@ -745,7 +658,7 @@ function HomeContent() {
                             {/* Thumbnail */}
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
                               <Image
-                                src={scene.previewUrl}
+                                src={scene.imageUrl}
                                 alt={scene.name}
                                 fill
                                 className="object-cover"
@@ -864,8 +777,7 @@ function HomeContent() {
               >
                 {/* Viewer header */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                     <button
                       onClick={handleReset}
                       className="icon-btn flex-shrink-0"
@@ -877,26 +789,6 @@ function HomeContent() {
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={handleShareScene}
-                      className="icon-btn-label"
-                      aria-label={copied ? "Copied" : "Share"}
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4" strokeWidth={2} />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="w-4 h-4" strokeWidth={2} />
-                          <span>Share</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
                 </div>
 
                 {/* 3D Viewer */}

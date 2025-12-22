@@ -5,77 +5,119 @@ import { useState, useEffect, useCallback } from "react";
 export interface SavedScene {
   id: string;
   name: string;
-  previewUrl: string; // base64 data URL of the original image
-  imageUrl?: string; // Vercel Blob URL for shareable previews
+  imageUrl: string;
   modelUrl: string;
   modelType: "ply" | "glb" | "gltf";
-  createdAt: number;
+  createdAt: string; // ISO date string from database
 }
 
-const STORAGE_KEY = "apple-sharp-scenes";
-const MAX_SCENES = 20; // Limit to prevent localStorage bloat
+// Convert API response to SavedScene format
+interface ApiScene {
+  id: string;
+  name: string;
+  imageUrl: string;
+  modelUrl: string;
+  modelType: string;
+  createdAt: string;
+}
 
 export function useScenesHistory() {
   const [scenes, setScenes] = useState<SavedScene[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load scenes from localStorage on mount
-  useEffect(() => {
+  // Fetch scenes from authenticated API on mount
+  const fetchScenes = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as SavedScene[];
-        // Sort by createdAt descending (newest first)
-        setScenes(parsed.sort((a, b) => b.createdAt - a.createdAt));
+      const response = await fetch("/api/scenes");
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated, just return empty scenes
+          setScenes([]);
+          return;
+        }
+        throw new Error("Failed to fetch scenes");
       }
-    } catch (error) {
-      console.error("Failed to load scenes from localStorage:", error);
+      
+      const data = await response.json();
+      const fetchedScenes: SavedScene[] = (data.scenes || []).map((scene: ApiScene) => ({
+        id: scene.id,
+        name: scene.name,
+        imageUrl: scene.imageUrl,
+        modelUrl: scene.modelUrl,
+        modelType: scene.modelType as "ply" | "glb" | "gltf",
+        createdAt: scene.createdAt,
+      }));
+      
+      setScenes(fetchedScenes);
+    } catch (err) {
+      console.error("Failed to fetch scenes:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch scenes");
+    } finally {
+      setIsLoading(false);
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
   }, []);
 
-  // Save scenes to localStorage whenever they change
+  // Fetch scenes on mount
   useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
-    } catch (error) {
-      console.error("Failed to save scenes to localStorage:", error);
-      // If storage is full, try removing oldest scenes
-      if (error instanceof DOMException && error.name === "QuotaExceededError") {
-        const trimmedScenes = scenes.slice(0, Math.floor(scenes.length / 2));
-        setScenes(trimmedScenes);
-      }
-    }
-  }, [scenes, isLoaded]);
+    fetchScenes();
+  }, [fetchScenes]);
 
-  const addScene = useCallback(
-    (scene: Omit<SavedScene, "id" | "createdAt">) => {
-      const newScene: SavedScene = {
-        ...scene,
-        id: `scene-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        createdAt: Date.now(),
-      };
+  // Add a new scene (called after successful processing)
+  // Note: This just refreshes the list since the API already created the scene
+  const refreshScenes = useCallback(async () => {
+    await fetchScenes();
+  }, [fetchScenes]);
 
-      setScenes((prev) => {
-        // Add new scene at the beginning, limit total scenes
-        const updated = [newScene, ...prev].slice(0, MAX_SCENES);
-        return updated;
-      });
-
-      return newScene.id;
-    },
-    []
-  );
-
-  const removeScene = useCallback((id: string) => {
+  // Remove a scene by ID
+  const removeScene = useCallback(async (id: string) => {
+    // Optimistically remove from UI
     setScenes((prev) => prev.filter((scene) => scene.id !== id));
-  }, []);
+    
+    try {
+      const response = await fetch(`/api/scenes/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        // Revert on error
+        await fetchScenes();
+        throw new Error("Failed to delete scene");
+      }
+    } catch (err) {
+      console.error("Failed to delete scene:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete scene");
+    }
+  }, [fetchScenes]);
 
-  const clearAllScenes = useCallback(() => {
+  // Clear all scenes for this user
+  const clearAllScenes = useCallback(async () => {
+    const sceneIds = scenes.map((s) => s.id);
+    
+    // Optimistically clear
     setScenes([]);
-  }, []);
+    
+    try {
+      // Delete all scenes in parallel
+      await Promise.all(
+        sceneIds.map((id) =>
+          fetch(`/api/scenes/${id}`, { method: "DELETE" })
+        )
+      );
+    } catch (err) {
+      console.error("Failed to clear all scenes:", err);
+      // Revert on error
+      await fetchScenes();
+    }
+  }, [scenes, fetchScenes]);
 
+  // Get a specific scene by ID
   const getScene = useCallback(
     (id: string) => {
       return scenes.find((scene) => scene.id === id);
@@ -83,16 +125,36 @@ export function useScenesHistory() {
     [scenes]
   );
 
-  const updateSceneName = useCallback((id: string, name: string) => {
+  // Update scene name
+  const updateSceneName = useCallback(async (id: string, name: string) => {
+    // Optimistically update
     setScenes((prev) =>
       prev.map((scene) => (scene.id === id ? { ...scene, name } : scene))
     );
-  }, []);
+    
+    try {
+      const response = await fetch(`/api/scenes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      
+      if (!response.ok) {
+        // Revert on error
+        await fetchScenes();
+        throw new Error("Failed to update scene name");
+      }
+    } catch (err) {
+      console.error("Failed to update scene name:", err);
+    }
+  }, [fetchScenes]);
 
   return {
     scenes,
     isLoaded,
-    addScene,
+    isLoading,
+    error,
+    refreshScenes,
     removeScene,
     clearAllScenes,
     getScene,

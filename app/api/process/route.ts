@@ -209,33 +209,43 @@ export async function POST(request: NextRequest) {
       console.log("Successfully uploaded PLY to Vercel Blob:", modelUrl);
     }
 
-    // Increment user's scene count on successful generation
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { sceneCount: { increment: 1 } },
-    });
+    // Extract scene name from original filename
+    const sceneName = file.name.replace(/\.[^/.]+$/, "") || "Untitled Scene";
+
+    // Create scene in database with user ownership and increment scene count
+    const [scene, updatedUser] = await prisma.$transaction([
+      prisma.scene.create({
+        data: {
+          name: sceneName,
+          imageUrl: imageUrl,
+          modelUrl: modelUrl,
+          modelType: "ply",
+          userId: session.user.id,
+        },
+      }),
+      prisma.user.update({
+        where: { id: session.user.id },
+        data: { sceneCount: { increment: 1 } },
+        select: { sceneCount: true, isPaid: true },
+      }),
+    ]);
 
     console.log("Successfully generated 3D Gaussian splats:", modelUrl);
 
-    // Get updated user info for response
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { sceneCount: true, isPaid: true },
-    });
-
     return NextResponse.json({
       success: true,
+      sceneId: scene.id,
       modelUrl: modelUrl,
       imageUrl: imageUrl,
       modelType: "ply",
       message: "3D Gaussian splats generated successfully using Apple Sharp",
-      usage: updatedUser ? {
+      usage: {
         sceneCount: updatedUser.sceneCount,
         isPaid: updatedUser.isPaid,
         remainingUploads: updatedUser.isPaid 
           ? null 
           : Math.max(0, FREE_SCENE_LIMIT - updatedUser.sceneCount),
-      } : undefined,
+      },
     });
   } catch (error) {
     console.error("Processing error:", error);

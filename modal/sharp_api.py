@@ -87,7 +87,7 @@ MODEL_CACHE_PATH = "/cache/models"
 
 @app.cls(
     image=sharp_image,
-    gpu="A10G",  # Use A10G GPU for cost-effective performance
+    gpu="A100",  # Use A100 GPU for maximum performance
     timeout=300,  # 5 minute timeout
     volumes={MODEL_CACHE_PATH: model_cache},
     scaledown_window=300,  # Keep container warm for 5 minutes

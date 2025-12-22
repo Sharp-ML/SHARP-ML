@@ -45,6 +45,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  scenes        Scene[]   // User's generated scenes
 
   // Usage tracking
   sceneCount    Int       @default(0)  // Number of scenes created
@@ -63,4 +64,22 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// Scene model to track user ownership of generated 3D scenes
+model Scene {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String   // URL to the uploaded image (in Vercel Blob)
+  modelUrl  String   // URL to the generated 3D model (in Vercel Blob)
+  modelType String   @default("ply") // ply, glb, gltf
+  
+  // User ownership
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
