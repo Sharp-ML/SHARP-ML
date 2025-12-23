@@ -706,7 +706,6 @@ function HomeContent() {
                         <div className="step-card-icon">${FREE_SCENE_LIMIT}</div>
                         <div className="step-card-title">Free scenes</div>
                       </div>
-
                       {/* AI-powered */}
                       <div className="step-card">
                         <div className="step-card-icon">
