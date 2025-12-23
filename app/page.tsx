@@ -703,7 +703,7 @@ function HomeContent() {
                     <div className="mt-8 flex justify-center items-stretch gap-8 text-center">
                       <div className="flex flex-col items-center justify-between py-4">
                         <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
-                        <div className="text-xs text-[var(--text-muted)]">Free scenes</div>
+                        <div className="text-xs text-[var(--text-muted)]">Scenes</div>
                       </div>
                       <div className="flex flex-col items-center justify-between py-4">
                         <Sparkles className="size-6 text-[var(--primary)] opacity-30" />
@@ -862,7 +862,7 @@ function HomeContent() {
                 rel="noopener noreferrer"
                 className="text-[var(--foreground)] hover:underline"
               >
-                Apple ml-sharp
+              ML-SHARP
               </a>
             </span>
           </div>
