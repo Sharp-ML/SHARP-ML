@@ -1,18 +1,9 @@
 # SHARP 3D — Transform Photos to 3D
 
-A stunning web application that converts any image into an interactive 3D scene using Apple's SHARP model for Gaussian splatting.
+A web application that converts any image into an interactive 3D scene using Apple's SHARP model for Gaussian splatting.
+https://sharp-ml.vercel.app/
 
-## Features
-
-- **Google OAuth Authentication** — Secure sign-in with email verification
-- **Usage Limits & Payments** — 3 free scenes, then upgrade via Stripe
-- **Drag & Drop Upload** — Beautiful, intuitive image upload interface
-- **Apple SHARP Model** — State-of-the-art image-to-3D using Modal serverless GPUs
-- **Interactive 3D Viewer** — Explore your Gaussian splat scene with mouse controls (rotate, zoom, pan)
-- **3D Model Export** — Download the generated PLY file for use in other 3D applications
-- **Scene History** — Your recent scenes are saved and shareable
-- **Responsive Design** — Works beautifully on desktop and mobile
-- **Fast Processing** — SHARP generates 3D in under a second on GPU
+<img width="1200" height="630" alt="og-imgae" src="https://github.com/user-attachments/assets/aca10a22-a0c1-44ea-86a2-d7493829c675" />
 
 ## Quick Start
 
@@ -21,9 +12,8 @@ A stunning web application that converts any image into an interactive 3D scene 
 1. **Modal Account** — Sign up at [modal.com](https://modal.com)
 2. **Vercel Account** — For deploying the web app
 3. **Google Cloud Console** — For OAuth credentials
-4. **Stripe Account** — For payment processing
-5. **PostgreSQL Database** — Use Neon, Supabase, or Railway
-6. **Python 3.10+** — For deploying the Modal endpoint
+4. **PostgreSQL Database** — Use Neon, Supabase, or Railway
+5. **Python 3.10+** — For deploying the Modal endpoint
 
 ### Step 1: Deploy the Sharp Model to Modal
 
@@ -67,15 +57,7 @@ npx prisma migrate deploy
 5. Add authorized redirect URI: `https://your-domain.com/api/auth/callback/google`
 6. Copy the Client ID and Client Secret
 
-### Step 4: Set Up Stripe
-
-1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
-2. Create a Product with a one-time price for "Pro" access
-3. Get your API keys from Developers → API keys
-4. Set up a webhook endpoint: `https://your-domain.com/api/stripe/webhook`
-5. Select the `checkout.session.completed` event
-
-### Step 5: Deploy to Vercel
+### Step 4: Deploy to Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/apple-sharp)
 
@@ -89,7 +71,7 @@ npm i -g vercel
 vercel
 ```
 
-### Step 6: Configure Environment Variables
+### Step 5: Configure Environment Variables
 
 In your Vercel project settings, add all required environment variables:
 
@@ -104,11 +86,6 @@ NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
 # Google OAuth
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
-
-# Stripe
-STRIPE_SECRET_KEY="sk_..."
-STRIPE_PRICE_ID="price_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
 
 # App
 NEXT_PUBLIC_APP_URL="https://your-domain.com"
@@ -126,7 +103,7 @@ BLOB_READ_WRITE_TOKEN="..."
 2. Navigate to **Storage** → **Create Database** → **Blob**
 3. This automatically adds the `BLOB_READ_WRITE_TOKEN`
 
-## 💻 Local Development
+## Local Development
 
 ### 1. Install Dependencies
 
@@ -156,7 +133,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 🎮 Usage
+## Usage
 
 1. **Sign In** — Use Google OAuth to create an account
 2. **Upload an Image** — Drag and drop or click to select a photo (PNG, JPG, or WebP)
@@ -168,7 +145,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 5. **Share** — Copy the shareable link to share your 3D scene
 6. **Upgrade** — After 3 free scenes, upgrade via Stripe for unlimited access
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ├── modal/
@@ -203,7 +180,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Framework** — [Next.js 16](https://nextjs.org/) with App Router
 - **Authentication** — [NextAuth.js v5](https://authjs.dev/) with Google OAuth
 - **Database** — [Prisma](https://prisma.io/) with PostgreSQL
-- **Payments** — [Stripe](https://stripe.com/) Checkout
 - **Styling** — [Tailwind CSS 4](https://tailwindcss.com/)
 - **Animations** — [Framer Motion](https://www.framer.com/motion/)
 - **3D Rendering** — [Three.js](https://threejs.org/) + [@mkkellogg/gaussian-splats-3d](https://github.com/mkkellogg/GaussianSplats3D)
@@ -228,8 +204,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Usage Limits
 
-- **Free tier**: 3 scene generations per user
-- **Pro tier**: Unlimited scene generations (one-time payment)
+- **Free tier**: 10 scene generations per user
+
 
 ### Modal Configuration
 
@@ -238,35 +214,6 @@ The `modal/sharp_api.py` file configures:
 - **Timeout**: 300 seconds
 - **Container idle**: 300 seconds (keeps warm for faster subsequent requests)
 - **Model caching**: Uses Modal Volume to cache the 1.4GB model weights
-
-### Cost Estimation
-
-Modal charges ~$0.000225/second for A10G GPU. Typical costs:
-- **Cold start**: ~30-60 seconds (~$0.007-0.014)
-- **Warm inference**: ~1-5 seconds (~$0.0002-0.001)
-- **Idle container**: Free (scales to zero when not in use)
-
-## About the Technology
-
-This app uses [Apple SHARP](https://huggingface.co/apple/Sharp) (Sharp Monocular View Synthesis), a state-of-the-art model for generating 3D Gaussian splats from a single image.
-
-### Key Features
-
-- **Ultra-Fast Generation** — Creates 3D Gaussian splats in under a second on GPU
-- **Single Image Input** — Works from just one photo
-- **Photorealistic Output** — Produces detailed 3D Gaussian splat representations
-- **Real-time Rendering** — Output can be rendered in real-time from novel viewpoints
-- **Open Source** — Available under MIT license
-
-### How It Works
-
-1. You sign in with Google (email verification required)
-2. You upload an image
-3. The image is sent to Modal where the Sharp model runs on a GPU
-4. Sharp analyzes the image and predicts a 3D Gaussian representation
-5. The output PLY file is stored in Vercel Blob
-6. The 3D viewer renders the Gaussian splats in your browser
-7. Your usage count is incremented (tracked in the database)
 
 ## Links
 
@@ -289,9 +236,6 @@ Check that:
 
 ### "Authentication required" error
 Make sure you're signed in with Google. The app requires authentication to protect against abuse.
-
-### "Usage limit reached" error
-You've used all 10 free scenes. Click the upgrade button to purchase unlimited access.
 
 ### Slow first request
 The first request after inactivity requires:
