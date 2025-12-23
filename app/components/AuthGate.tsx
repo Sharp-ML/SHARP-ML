@@ -192,10 +192,6 @@ export function AuthGate({ children }: AuthGateProps) {
                 <div className="text-xs text-[var(--text-muted)]">Free scenes</div>
               </div>
               <div className='h-[100px] space-between flex flex-col items-center justify-center'>
-                <div className="text-2xl font-bold text-[var(--primary)] opacity-30">∞</div>
-                <div className="text-xs text-[var(--text-muted)]">With upgrade</div>
-              </div>
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
                 <Sparkles className="size-5 mb-2 text-[var(--primary)] opacity-30" />
                 <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
               </div>

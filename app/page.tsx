@@ -707,12 +707,6 @@ function HomeContent() {
                         <div className="step-card-title">Free scenes</div>
                       </div>
 
-                      {/* With upgrade */}
-                      <div className="step-card">
-                        <div className="step-card-icon">∞</div>
-                        <div className="step-card-title">With upgrade</div>
-                      </div>
-
                       {/* AI-powered */}
                       <div className="step-card">
                         <div className="step-card-icon">
