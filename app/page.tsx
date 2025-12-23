@@ -884,7 +884,7 @@ function HomeContent() {
               Project
             </a>
             <a
-              href="https://github.com/apple/ml-sharp"
+              href="https://github.com/Sharp-ML/SHARP-ML"
               target="_blank"
               rel="noopener noreferrer"
               className="text-link flex items-center gap-2"
