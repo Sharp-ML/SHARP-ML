@@ -848,7 +848,6 @@ function HomeContent() {
           </AnimatePresence>
         </div>
       </main>
-
       {/* Footer - Clean and minimal like ConnectKit */}
       <footer className="py-8 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
