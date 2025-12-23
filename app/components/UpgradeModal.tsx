@@ -53,7 +53,7 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
               <div className="px-5 pb-5">
                 {/* Message */}
                 <p className="text-gray-600 text-sm mt-2 mb-4">
-                  You&apos;ve reached your free limit of {limit} scenes. Want more? Reach out and let us know!
+                  You&apos;ve reached your limit of {limit} scenes. Want more? Reach out and let us know!
                 </p>
 
                 {/* Usage info */}
