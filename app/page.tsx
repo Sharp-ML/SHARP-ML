@@ -700,18 +700,14 @@ function HomeContent() {
                     </div>
                   ) : (
                     // Features - minimal centered style
-                    <div className="flex items-start justify-center gap-8 py-4">
-                      {/* 10 Free scenes */}
-                      <div className="step-card">
-                        <div className="step-card-icon">${FREE_SCENE_LIMIT}</div>
-                        <div className="step-card-title">Free scenes</div>
+                    <div className="mt-8 flex justify-center items-stretch gap-8 text-center">
+                      <div className="flex flex-col items-center justify-between py-4">
+                        <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
+                        <div className="text-xs text-[var(--text-muted)]">Free scenes</div>
                       </div>
-                      {/* AI-powered */}
-                      <div className="step-card">
-                        <div className="step-card-icon">
-                          <Sparkles className="w-8 h-8" strokeWidth={1.5} />
-                        </div>
-                        <div className="step-card-title">AI-powered</div>
+                      <div className="flex flex-col items-center justify-between py-4">
+                        <Sparkles className="size-6 text-[var(--primary)] opacity-30" />
+                        <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
                       </div>
                     </div>
                   )}
@@ -906,14 +902,13 @@ function HomeContent() {
               </button>
               <AnimatePresence>
                 {showHelpMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    style={{ transformOrigin: "bottom right" }}
-                    className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
-                  >
+<motion.div
+                   initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                   animate={{ opacity: 1, y: 0, scale: 1 }}
+                   transition={{ duration: 0.1 }}
+                   style={{ transformOrigin: "bottom right" }}
+                   className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
+                 >
                     <a
                       href="https://x.com/messages/compose?recipient_id=1325862778603769856"
                       target="_blank"

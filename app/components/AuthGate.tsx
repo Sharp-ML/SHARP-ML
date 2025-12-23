@@ -186,13 +186,13 @@ export function AuthGate({ children }: AuthGateProps) {
               </p>
             </div>
 
-            <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
+            <div className="mt-8 flex justify-center items-stretch gap-8 text-center">
+              <div className="flex flex-col items-center justify-between py-4">
                 <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
                 <div className="text-xs text-[var(--text-muted)]">Free scenes</div>
               </div>
-              <div className='h-[100px] space-between flex flex-col items-center justify-center'>
-                <Sparkles className="size-5 mb-2 text-[var(--primary)] opacity-30" />
+              <div className="flex flex-col items-center justify-between py-4">
+                <Sparkles className="size-6 text-[var(--primary)] opacity-30" />
                 <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
               </div>
             </div>
