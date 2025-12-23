@@ -158,7 +158,7 @@ export function AuthGate({ children }: AuthGateProps) {
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
               <button
                 onClick={() => signIn("google")}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium"
+                className="w-full flex items-center cursor-pointer justify-center gap-3 px-4 py-3 bg-white text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
