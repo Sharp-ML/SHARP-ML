@@ -20,6 +20,7 @@ import {
   Upload,
   Wand2,
 } from "lucide-react";
+import { ImageIcon } from "@/components/ui/image";
 import Image from "next/image";
 import ImageUpload from "./components/ImageUpload";
 import PromptInput from "./components/PromptInput";
@@ -102,6 +103,7 @@ function HomeContent() {
   const [activeTab, setActiveTab] = useState<"upload" | "prompt">("prompt");
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
+  const [processingMode, setProcessingMode] = useState<"upload" | "prompt">("upload");
   const [progress, setProgress] = useState(0);
   const [stageProgress, setStageProgress] = useState<number | undefined>(undefined);
   const [modelUrl, setModelUrl] = useState<string | null>(null);
@@ -214,6 +216,7 @@ function HomeContent() {
     inProgressAbortRef.current = abortController;
 
     setAppState("processing");
+    setProcessingMode("upload");
     setProcessingStage("uploading");
     setProgress(0);
     setStageProgress(undefined);
@@ -402,6 +405,7 @@ function HomeContent() {
     inProgressAbortRef.current = abortController;
 
     setAppState("processing");
+    setProcessingMode("prompt");
     setProcessingStage("uploading");
     setProgress(0);
     setStageProgress(undefined);
@@ -676,6 +680,22 @@ function HomeContent() {
     }
   }, [refreshScenes, canUpload, originalPrompt, imageUrl, previewUrl]);
 
+  // Navigate back to home during processing (keeps generation running in background)
+  const handleBackDuringProcessing = useCallback(() => {
+    // Reset UI state but keep the in-progress scene
+    setAppState("upload");
+    setProcessingStage("uploading");
+    setProgress(0);
+    setStageProgress(undefined);
+    setPreviewUrl(null);
+    setError(null);
+    setIsConfigError(false);
+    setSetupInstructions(null);
+    setCurrentSceneName(null);
+    // Note: We intentionally do NOT clear inProgressScene here
+    // The generation continues in the background
+  }, []);
+
   const handleReset = useCallback(() => {
     setAppState("upload");
     setProcessingStage("uploading");
@@ -692,6 +712,8 @@ function HomeContent() {
     // Clear regeneration state
     setIsRegenerating(false);
     setOriginalPrompt(null);
+    // Clear in-progress state
+    setInProgressScene(null);
     // Clear URL parameters
     router.replace("/", { scroll: false });
   }, [router]);
@@ -1191,10 +1213,10 @@ function HomeContent() {
                       />
                     </motion.div>
                   ) : (
-                    /* Placeholder shimmer while uploading */
+                    /* Placeholder shimmer while generating/uploading */
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="absolute inset-0 shimmer" />
-                      <Upload className="w-8 h-8 text-[var(--text-muted)] opacity-30" strokeWidth={1.5} />
+                      <ImageIcon size={32} className="text-[var(--text-muted)] opacity-30" />
                     </div>
                   )}
                 </div>
@@ -1204,6 +1226,7 @@ function HomeContent() {
                   progress={progress}
                   errorMessage={error || undefined}
                   stageProgress={processingStage === "processing" ? stageProgress : undefined}
+                  mode={processingMode}
                 />
               </motion.div>
             )}

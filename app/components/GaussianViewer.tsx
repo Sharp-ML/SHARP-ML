@@ -878,20 +878,20 @@ export default function GaussianViewer({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-0 z-30 pointer-events-none overflow-hidden"
+                className="absolute inset-0 z-30 pointer-events-none overflow-hidden rounded-2xl"
               >
                 {/* Animated wave ripples emanating from center */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="regenerate-wave regenerate-wave-1" />
-                  <div className="regenerate-wave regenerate-wave-2" />
-                  <div className="regenerate-wave regenerate-wave-3" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] aspect-square">
+                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_infinite]" />
+                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_1s_infinite]" />
+                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_2s_infinite]" />
                 </div>
                 
                 {/* Pulsing border glow */}
-                <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
+                <div className="absolute inset-0 rounded-2xl shadow-[inset_0_0_40px_rgba(147,51,234,0.2),0_0_30px_rgba(147,51,234,0.15)] animate-pulse" />
                 
                 {/* Scanning line effect */}
-                <div className="absolute inset-0 regenerate-scan-line" />
+                <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/60 to-transparent shadow-[0_0_20px_8px_rgba(147,51,234,0.3)] animate-[scan-line_2s_ease-in-out_infinite]" />
                 
                 {/* Updating badge */}
                 <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>

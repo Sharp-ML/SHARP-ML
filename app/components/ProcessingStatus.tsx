@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { AlertCircle } from "lucide-react";
-import { LayersIcon } from "@/components/ui/layers";
+import { ImageIcon } from "@/components/ui/image";
 import { CpuIcon } from "@/components/ui/cpu";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { CircleCheckIcon } from "@/components/ui/circle-check";
@@ -12,6 +12,7 @@ interface ProcessingStatusProps {
   progress?: number;
   errorMessage?: string;
   stageProgress?: number; // 0-100 progress within the current stage
+  mode?: "upload" | "prompt"; // Whether user uploaded an image or used a prompt
 }
 
 type StageId = "uploading" | "processing" | "generating" | "complete";
@@ -23,42 +24,52 @@ interface Stage {
   description: string;
   descriptionComplete: string;
   estimatedSeconds: number; // Base estimate for this stage
+  showTimeEstimate: boolean; // Whether to show time estimate for this stage
 }
 
-const stages: Stage[] = [
-  {
-    id: "uploading",
-    label: "Uploading Image",
-    labelComplete: "Uploaded",
-    description: "Transferring your image to the server",
-    descriptionComplete: "Transferred your image to the server",
-    estimatedSeconds: 5,
-  },
-  {
-    id: "processing",
-    label: "Analyzing Scene",
-    labelComplete: "Analyzed",
-    description: "Running neural network inference",
-    descriptionComplete: "Neural network inference complete",
-    estimatedSeconds: 60,
-  },
-  {
-    id: "generating",
-    label: "Generating 3D Gaussians",
-    labelComplete: "Generated",
-    description: "Creating photorealistic 3D representation",
-    descriptionComplete: "Created photorealistic 3D representation",
-    estimatedSeconds: 10,
-  },
-  {
-    id: "complete",
-    label: "Complete",
-    labelComplete: "Complete",
-    description: "Your 3D scene is ready to explore",
-    descriptionComplete: "Your 3D scene is ready to explore",
-    estimatedSeconds: 0,
-  },
-];
+// Get stages based on mode
+function getStages(mode: "upload" | "prompt"): Stage[] {
+  const isPrompt = mode === "prompt";
+  
+  return [
+    {
+      id: "uploading",
+      label: isPrompt ? "Generating Image" : "Uploading Image",
+      labelComplete: isPrompt ? "Generated" : "Uploaded",
+      description: isPrompt ? "Creating image from your prompt" : "Transferring your image to the server",
+      descriptionComplete: isPrompt ? "Image generated from prompt" : "Image transferred to server",
+      estimatedSeconds: isPrompt ? 8 : 5,
+      showTimeEstimate: false, // Don't show time for this quick initial stage
+    },
+    {
+      id: "processing",
+      label: "Analyzing Scene",
+      labelComplete: "Analyzed",
+      description: "Running neural network inference",
+      descriptionComplete: "Neural network inference complete",
+      estimatedSeconds: 60,
+      showTimeEstimate: true,
+    },
+    {
+      id: "generating",
+      label: "Generating 3D",
+      labelComplete: "Generated",
+      description: "Creating 3D representation",
+      descriptionComplete: "3D representation created",
+      estimatedSeconds: 10,
+      showTimeEstimate: true,
+    },
+    {
+      id: "complete",
+      label: "Complete",
+      labelComplete: "Complete",
+      description: "Your 3D scene is ready to explore",
+      descriptionComplete: "Your 3D scene is ready to explore",
+      estimatedSeconds: 0,
+      showTimeEstimate: false,
+    },
+  ];
+}
 
 // Get icon for current stage
 function StageIcon({ 
@@ -86,7 +97,7 @@ function StageIcon({
 
   switch (stageId) {
     case "uploading":
-      return <LayersIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+      return <ImageIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
     case "processing":
       return <CpuIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
     case "generating":
@@ -103,14 +114,17 @@ export default function ProcessingStatus({
   progress = 0,
   errorMessage,
   stageProgress,
+  mode = "upload",
 }: ProcessingStatusProps) {
+  const stages = getStages(mode);
   const currentIndex = stages.findIndex((s) => s.id === status);
   const currentStage = stages[currentIndex] || stages[0];
   const isComplete = status === "complete";
 
-  // Calculate time remaining
+  // Calculate time remaining - only for stages that show it
   const getTimeRemaining = () => {
     if (isComplete) return null;
+    if (!currentStage.showTimeEstimate) return null;
     
     // Use stageProgress if available (for the processing stage)
     if (stageProgress !== undefined && stageProgress > 0) {
@@ -118,10 +132,13 @@ export default function ProcessingStatus({
       return remaining;
     }
     
-    // Otherwise estimate based on overall progress
-    const totalEstimate = stages.reduce((acc, s) => acc + s.estimatedSeconds, 0);
-    const remaining = Math.max(1, Math.round((100 - progress) / 100 * totalEstimate));
-    return remaining;
+    // Otherwise estimate based on overall progress for processing stage
+    if (status === "processing") {
+      const remaining = Math.max(1, Math.round((100 - progress) / 100 * currentStage.estimatedSeconds));
+      return remaining;
+    }
+    
+    return null;
   };
 
   const timeRemaining = getTimeRemaining();
