@@ -1049,6 +1049,7 @@ function HomeContent() {
                         <PromptInput
                           onSubmit={handlePromptSubmit}
                           disabled={!canUpload}
+                          onDisabledClick={() => setShowUpgradeModal(true)}
                         />
                       </motion.div>
                     )}
