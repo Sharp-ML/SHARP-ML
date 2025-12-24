@@ -10,14 +10,14 @@ interface FollowupInputProps {
   disabled?: boolean;
 }
 
-// Format seconds to "Xm Ys" or "Xs"
-function formatTime(seconds: number): string {
+// Format seconds to "Xm Ys" or "Xs" with tabular-nums styling
+function FormattedTime({ seconds }: { seconds: number }) {
   if (seconds < 60) {
-    return `${seconds}s`;
+    return <><span className="tabular-nums">{seconds}</span>s</>;
   }
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins}m ${secs}s`;
+  return <><span className="tabular-nums">{mins}</span>m <span className="tabular-nums">{secs}</span>s</>;
 }
 
 export default function FollowupInput({
@@ -101,7 +101,7 @@ export default function FollowupInput({
       </div>
       <p className="text-xs text-[var(--text-muted)] mt-2 px-1">
         {isLoading 
-          ? `Regenerating • ${formatTime(elapsedSeconds)} elapsed`
+          ? <>Regenerating • <FormattedTime seconds={elapsedSeconds} /> elapsed</>
           : "Describe changes to regenerate the 3D scene"
         }
       </p>
