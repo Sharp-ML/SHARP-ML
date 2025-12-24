@@ -870,7 +870,7 @@ export default function GaussianViewer({
             </motion.div>
           )}
 
-          {/* Regenerating overlay effect with animated wave ripples */}
+          {/* Regenerating overlay effect */}
           <AnimatePresence>
             {isRegenerating && !mini && (
               <motion.div
@@ -878,20 +878,10 @@ export default function GaussianViewer({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-0 z-30 pointer-events-none overflow-hidden rounded-2xl"
+                className="absolute inset-0 z-30 pointer-events-none"
               >
-                {/* Animated wave ripples emanating from center */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] aspect-square">
-                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_infinite]" />
-                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_1s_infinite]" />
-                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/40 animate-[wave-expand_3s_ease-out_2s_infinite]" />
-                </div>
-                
                 {/* Pulsing border glow */}
-                <div className="absolute inset-0 rounded-2xl shadow-[inset_0_0_40px_rgba(147,51,234,0.2),0_0_30px_rgba(147,51,234,0.15)] animate-pulse" />
-                
-                {/* Scanning line effect */}
-                <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/60 to-transparent shadow-[0_0_20px_8px_rgba(147,51,234,0.3)] animate-[scan-line_2s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
                 
                 {/* Updating badge */}
                 <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>
@@ -904,7 +894,7 @@ export default function GaussianViewer({
                         : "glass text-[var(--foreground)]"
                     }`}
                   >
-                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
                     Regenerating...
                   </motion.div>
                 </div>
