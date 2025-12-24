@@ -7,7 +7,13 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate:dev": "dotenv -e .env.development.local -- prisma migrate dev",
+    "db:push:dev": "dotenv -e .env.development.local -- prisma db push",
+    "db:studio:dev": "dotenv -e .env.development.local -- prisma studio",
+    "db:seed:dev": "dotenv -e .env.development.local -- prisma db seed",
+    "db:migrate:prod": "echo '🚫 Production migrations should only run in CI/CD. See docs/DATABASE-SAFETY.md' && exit 1",
+    "db:push:prod": "echo '🚫 Production db push should only run in CI/CD. See docs/DATABASE-SAFETY.md' && exit 1"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
