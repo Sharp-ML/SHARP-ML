@@ -10,41 +10,19 @@ import { auth } from "@/lib/auth";
 export const runtime = "nodejs";
 export const maxDuration = 60; // 1 minute for image generation
 
-// Hidden system prompt optimized for Gaussian splat 3D reconstruction
-const DEPTH_SYSTEM_PROMPT = `Generate an image optimized for 3D reconstruction. This image will be converted into an interactive 3D scene that users can orbit around, zoom into, and explore from any angle.
+// System prompt for editing images while maintaining style consistency
+const EDIT_SYSTEM_PROMPT = `You are an image editor. The user will provide an existing image and a description of changes they want.
 
-COMPOSITION (critical for 3D viewer):
-- Center the main subject in the frame with breathing room around all edges
-- Show the complete subject - never crop or cut off parts of the scene
-- Design a scene that looks coherent from all viewing angles (imagine orbiting 360° around it)
-- Slight 3/4 overhead angle works best for depth perception
+Your task is to generate a NEW image that:
+1. Maintains the EXACT same visual style, color palette, and artistic approach as the original
+2. Keeps the same camera angle, perspective, and composition
+3. Preserves the overall scene structure and layout
+4. Incorporates the requested changes seamlessly into the existing scene
 
-DEPTH & STRUCTURE:
-- Create clear separation between foreground, middle ground, and background elements
-- Include objects at varying distances to establish strong depth
-- Avoid large flat surfaces directly facing the camera
-- Add overlapping elements to reinforce spatial relationships
+The output should look like a natural evolution of the original image, NOT a completely new scene.
+Keep the miniature diorama aesthetic, lighting, and handcrafted feel consistent with the original.
 
-MATERIALS & SURFACES:
-- Prefer solid, opaque materials with rich surface detail and texture
-- Include fine details that reward close inspection (users can zoom in very close)
-- Matte and semi-matte surfaces work best
-
-LIGHTING:
-- Soft, diffused lighting (like overcast daylight or soft studio lighting)
-- Avoid harsh directional shadows that create depth ambiguity
-- Even illumination across the scene
-
-MUST AVOID (these break 3D reconstruction):
-- Text, signs, logos, watermarks, or writing of any kind
-- Transparent materials: glass, water, ice, windows
-- Highly reflective surfaces: mirrors, chrome, polished metal
-- Volumetric effects: smoke, fog, fire, clouds, particles
-- Motion blur or depth-of-field blur
-- Over-saturated or neon colors
-- Heavy HDR look or artificial glow effects
-
-Generate the scene as: `;
+Generate the modified scene based on this change request: `;
 
 // Generate unique filename
 function generateId(): string {
@@ -76,11 +54,6 @@ export async function POST(request: NextRequest) {
         {
           error: "Server configuration error",
           message: "GEMINI_API_KEY is not configured.",
-          setup: {
-            step1: "Go to Google AI Studio: https://aistudio.google.com/apikey",
-            step2: "Create a new API key",
-            step3: "Add GEMINI_API_KEY to your environment variables",
-          },
         },
         { status: 500 }
       );
@@ -88,29 +61,63 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { prompt } = body;
+    const { imageUrl, editPrompt } = body;
 
-    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    if (!imageUrl || typeof imageUrl !== "string") {
       return NextResponse.json(
-        { error: "Invalid request", message: "A prompt is required" },
+        { error: "Invalid request", message: "An image URL is required" },
         { status: 400 }
       );
     }
 
+    if (!editPrompt || typeof editPrompt !== "string" || !editPrompt.trim()) {
+      return NextResponse.json(
+        { error: "Invalid request", message: "An edit prompt is required" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the existing image
+    console.log("Fetching existing image for editing...");
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch image", message: "Could not retrieve the existing image" },
+        { status: 400 }
+      );
+    }
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageBase64 = Buffer.from(imageBuffer).toString("base64");
+    
+    // Determine mime type from response or URL
+    const contentType = imageResponse.headers.get("content-type") || "image/png";
+    const mimeType = contentType.includes("jpeg") || contentType.includes("jpg") 
+      ? "image/jpeg" 
+      : "image/png";
+
     // Initialize Gemini client
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-    // Combine system prompt with user prompt for optimal 3D output
-    const fullPrompt = DEPTH_SYSTEM_PROMPT + prompt.trim();
+    // Combine system prompt with user's edit request
+    const fullPrompt = EDIT_SYSTEM_PROMPT + editPrompt.trim();
 
-    console.log("Generating image with Gemini...");
+    console.log("Editing image with Gemini...");
 
-    // Generate image using Gemini's image generation model
+    // Generate edited image using Gemini's multimodal capabilities
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
       contents: [{ 
         role: "user",
-        parts: [{ text: fullPrompt }]
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: imageBase64,
+            },
+          },
+          { text: fullPrompt }
+        ]
       }],
       config: {
         responseModalities: ["image", "text"],
@@ -122,70 +129,70 @@ export async function POST(request: NextRequest) {
     if (!candidate?.content?.parts) {
       console.error("No content in Gemini response");
       return NextResponse.json(
-        { error: "Image generation failed", message: "No image was generated" },
+        { error: "Image editing failed", message: "No image was generated" },
         { status: 500 }
       );
     }
 
     // Find the image part in the response
-    let imageData: string | null = null;
-    let mimeType = "image/png";
+    let outputImageData: string | null = null;
+    let outputMimeType = "image/png";
 
     for (const part of candidate.content.parts) {
       if (part.inlineData?.data) {
-        imageData = part.inlineData.data;
-        mimeType = part.inlineData.mimeType || "image/png";
+        outputImageData = part.inlineData.data;
+        outputMimeType = part.inlineData.mimeType || "image/png";
         break;
       }
     }
 
-    if (!imageData) {
+    if (!outputImageData) {
       console.error("No image data in Gemini response");
       return NextResponse.json(
-        { error: "Image generation failed", message: "No image data received" },
+        { error: "Image editing failed", message: "No edited image data received" },
         { status: 500 }
       );
     }
 
     // Convert base64 to buffer
-    const imageBuffer = Buffer.from(imageData, "base64");
+    const outputBuffer = Buffer.from(outputImageData, "base64");
     
     // Generate unique ID for this image
     const id = generateId();
-    const ext = mimeType.includes("png") ? "png" : "jpg";
+    const ext = outputMimeType.includes("png") ? "png" : "jpg";
     
-    let imageUrl: string;
+    let outputUrl: string;
     const localDev = isLocalDev();
 
     if (localDev) {
       // Local development: save to public folder
-      const uploadsDir = path.join(process.cwd(), "public", "generated");
+      const uploadsDir = path.join(process.cwd(), "public", "edited");
       if (!existsSync(uploadsDir)) {
         await mkdir(uploadsDir, { recursive: true });
       }
       const fileName = `${id}.${ext}`;
       const filePath = path.join(uploadsDir, fileName);
-      await writeFile(filePath, imageBuffer);
-      imageUrl = `/generated/${fileName}`;
-      console.log("Local dev: saved generated image to", filePath);
+      await writeFile(filePath, outputBuffer);
+      outputUrl = `/edited/${fileName}`;
+      console.log("Local dev: saved edited image to", filePath);
     } else {
       // Production: upload to Vercel Blob
-      const fileName = `generated/${id}.${ext}`;
-      const blob = await put(fileName, imageBuffer, {
+      const fileName = `edited/${id}.${ext}`;
+      const blob = await put(fileName, outputBuffer, {
         access: "public",
-        contentType: mimeType,
+        contentType: outputMimeType,
       });
-      imageUrl = blob.url;
-      console.log("Uploaded generated image to Vercel Blob:", imageUrl);
+      outputUrl = blob.url;
+      console.log("Uploaded edited image to Vercel Blob:", outputUrl);
     }
 
     return NextResponse.json({
       success: true,
-      imageUrl,
-      prompt: prompt.trim(),
+      imageUrl: outputUrl,
+      editPrompt: editPrompt.trim(),
     });
   } catch (error) {
-    console.error("Image generation error:", error);
+    console.error("Image editing error:", error);
 
     const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -222,7 +229,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { 
-        error: "Image generation failed", 
+        error: "Image editing failed", 
         message: errorMessage,
       },
       { status: 500 }
@@ -233,12 +240,13 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Image Generation API - Powered by Gemini",
+    message: "Image Editing API - Powered by Gemini",
     endpoints: {
-      POST: "Generate an image from a text prompt (requires authentication)",
+      POST: "Edit an existing image based on a prompt (requires authentication)",
     },
     parameters: {
-      prompt: "Text description of the image to generate",
+      imageUrl: "URL of the existing image to edit",
+      editPrompt: "Description of the changes to make",
     },
   });
 }

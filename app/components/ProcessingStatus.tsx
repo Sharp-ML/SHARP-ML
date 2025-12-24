@@ -22,6 +22,7 @@ interface Stage {
   labelComplete: string;
   description: string;
   descriptionComplete: string;
+  estimatedSeconds: number; // Base estimate for this stage
 }
 
 const stages: Stage[] = [
@@ -31,6 +32,7 @@ const stages: Stage[] = [
     labelComplete: "Uploaded",
     description: "Transferring your image to the server",
     descriptionComplete: "Transferred your image to the server",
+    estimatedSeconds: 5,
   },
   {
     id: "processing",
@@ -38,6 +40,7 @@ const stages: Stage[] = [
     labelComplete: "Analyzed",
     description: "Running neural network inference",
     descriptionComplete: "Neural network inference complete",
+    estimatedSeconds: 60,
   },
   {
     id: "generating",
@@ -45,6 +48,7 @@ const stages: Stage[] = [
     labelComplete: "Generated",
     description: "Creating photorealistic 3D representation",
     descriptionComplete: "Created photorealistic 3D representation",
+    estimatedSeconds: 10,
   },
   {
     id: "complete",
@@ -52,161 +56,46 @@ const stages: Stage[] = [
     labelComplete: "Complete",
     description: "Your 3D scene is ready to explore",
     descriptionComplete: "Your 3D scene is ready to explore",
+    estimatedSeconds: 0,
   },
 ];
 
-// Individual stage row component
-function StageRow({ 
-  stage, 
-  index, 
-  currentIndex, 
-  status,
-  stageProgress,
+// Get icon for current stage
+function StageIcon({ 
+  stageId, 
+  isComplete, 
+  isAnimating,
+  className = "",
 }: { 
-  stage: Stage; 
-  index: number; 
-  currentIndex: number; 
-  status: string;
-  stageProgress?: number;
+  stageId: StageId; 
+  isComplete: boolean;
+  isAnimating: boolean;
+  className?: string;
 }) {
-  const isComplete = index < currentIndex;
-  const isCurrent = index === currentIndex;
-  const shouldAnimate = isCurrent && status !== "complete";
+  if (isComplete) {
+    return (
+      <CircleCheckIcon
+        size={20}
+        className={`text-[var(--success)] ${className}`}
+        isAnimating={true}
+      />
+    );
+  }
 
-  const renderIcon = () => {
-    if (isComplete) {
-      return (
-        <CircleCheckIcon
-          size={20}
-          className="text-[var(--success)]"
-          isAnimating={true}
-        />
-      );
-    }
+  const iconClassName = `text-white ${className}`;
 
-    const iconClassName = isCurrent ? "text-white" : "text-[var(--text-muted)]";
-
-    switch (stage.id) {
-      case "uploading":
-        return (
-          <LayersIcon
-            size={20}
-            className={iconClassName}
-            isAnimating={shouldAnimate}
-          />
-        );
-      case "processing":
-        return (
-          <CpuIcon
-            size={20}
-            className={iconClassName}
-            isAnimating={shouldAnimate}
-          />
-        );
-      case "generating":
-        return (
-          <SparklesIcon
-            size={20}
-            className={iconClassName}
-            isAnimating={shouldAnimate}
-          />
-        );
-      case "complete":
-        return (
-          <CircleCheckIcon
-            size={20}
-            className={iconClassName}
-            isAnimating={isCurrent}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -5 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`flex items-center gap-4 p-4 rounded-xl transition-all border ${
-        isCurrent
-          ? "bg-[var(--warm-tint)] border-[var(--border)]"
-          : isComplete
-            ? "opacity-70 border-transparent"
-            : "opacity-40 border-transparent"
-      }`}
-    >
-      <div
-        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-          isCurrent
-            ? "bg-[var(--foreground)]"
-            : isComplete
-              ? "bg-[var(--success)]/10"
-              : "bg-[var(--surface-elevated)] border border-[var(--border)]"
-        }`}
-      >
-        {renderIcon()}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p
-          className={`text-sm font-medium ${
-            isCurrent
-              ? "text-[var(--foreground)]"
-              : isComplete
-                ? "text-[var(--success)]"
-                : "text-[var(--text-muted)]"
-          }`}
-        >
-          {isComplete ? stage.labelComplete : stage.label}
-        </p>
-        {(isCurrent || isComplete) && (
-          <p className="text-sm text-[var(--text-muted)] truncate">
-            {isComplete ? stage.descriptionComplete : stage.description}
-          </p>
-        )}
-        {/* Stage progress bar for processing stage */}
-        {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
-          <div className="mt-2">
-            <div className="h-1 bg-[var(--input)] rounded-full overflow-hidden">
-              <motion.div
-                className="h-full rounded-full bg-[var(--foreground)]/60"
-                initial={{ width: 0 }}
-                animate={{ width: `${stageProgress}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              />
-            </div>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              ~{Math.max(1, Math.round((100 - stageProgress) / 100 * 60))}s remaining
-            </p>
-          </div>
-        )}
-      </div>
-
-      {isCurrent && status !== "complete" && stageProgress === undefined && (
-        <div className="flex gap-1">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]"
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{
-                duration: 1,
-                repeat: Infinity,
-                delay: i * 0.15,
-              }}
-            />
-          ))}
-        </div>
-      )}
-      {isCurrent && stageProgress !== undefined && stageProgress > 0 && status !== "complete" && (
-        <span className="text-xs font-medium text-[var(--text-muted)] tabular-nums">
-          {Math.round(stageProgress)}%
-        </span>
-      )}
-    </motion.div>
-  );
+  switch (stageId) {
+    case "uploading":
+      return <LayersIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+    case "processing":
+      return <CpuIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+    case "generating":
+      return <SparklesIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+    case "complete":
+      return <CircleCheckIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+    default:
+      return null;
+  }
 }
 
 export default function ProcessingStatus({
@@ -216,6 +105,26 @@ export default function ProcessingStatus({
   stageProgress,
 }: ProcessingStatusProps) {
   const currentIndex = stages.findIndex((s) => s.id === status);
+  const currentStage = stages[currentIndex] || stages[0];
+  const isComplete = status === "complete";
+
+  // Calculate time remaining
+  const getTimeRemaining = () => {
+    if (isComplete) return null;
+    
+    // Use stageProgress if available (for the processing stage)
+    if (stageProgress !== undefined && stageProgress > 0) {
+      const remaining = Math.max(1, Math.round((100 - stageProgress) / 100 * currentStage.estimatedSeconds));
+      return remaining;
+    }
+    
+    // Otherwise estimate based on overall progress
+    const totalEstimate = stages.reduce((acc, s) => acc + s.estimatedSeconds, 0);
+    const remaining = Math.max(1, Math.round((100 - progress) / 100 * totalEstimate));
+    return remaining;
+  };
+
+  const timeRemaining = getTimeRemaining();
 
   if (status === "error") {
     return (
@@ -224,11 +133,11 @@ export default function ProcessingStatus({
         animate={{ opacity: 1, y: 0 }}
         className="card border-[var(--error)]/20"
       >
-        <div className="flex items-center gap-3">
-          <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-[var(--error)]/10 border border-[var(--error)]/20 flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-5 h-5 text-[var(--error)]" strokeWidth={1.5} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-[var(--error)]">Processing Failed</h3>
             <p className="text-sm text-[var(--text-muted)]">
               {errorMessage || "Something went wrong. Please try again."}
@@ -239,42 +148,68 @@ export default function ProcessingStatus({
     );
   }
 
+  // Calculate the effective progress (use stageProgress for more granular updates during processing)
+  const effectiveProgress = stageProgress !== undefined && status === "processing"
+    ? Math.round(20 + (stageProgress / 100) * 60) // Processing stage is roughly 20-80% of total
+    : progress;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="card"
     >
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-sm font-medium ${status === "complete" ? "text-[var(--success)]" : ""}`}>
-            {status === "complete" ? stages[currentIndex]?.labelComplete : stages[currentIndex]?.label || "Processing..."}
-          </span>
-          <span className="text-sm text-[var(--text-muted)]">{progress}%</span>
-        </div>
-        <div className="h-2 bg-[var(--surface-elevated)] rounded-full overflow-hidden">
-          <motion.div
-            className={`h-full rounded-full ${status === "complete" ? "bg-[var(--success)]" : "bg-[var(--foreground)]"}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+      {/* Consolidated progress row: icon + progress bar + info */}
+      <div className="flex items-center gap-4">
+        {/* Icon box */}
+        <div
+          className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+            isComplete
+              ? "bg-[var(--success)]/10 border border-[var(--success)]/20"
+              : "bg-[var(--foreground)]"
+          }`}
+        >
+          <StageIcon
+            stageId={currentStage.id}
+            isComplete={isComplete}
+            isAnimating={!isComplete}
           />
         </div>
-      </div>
 
-      {/* Stages */}
-      <div className="space-y-3">
-        {stages.map((stage, index) => (
-          <StageRow
-            key={stage.id}
-            stage={stage}
-            index={index}
-            currentIndex={currentIndex}
-            status={status}
-            stageProgress={index === currentIndex ? stageProgress : undefined}
-          />
-        ))}
+        {/* Progress bar and text */}
+        <div className="flex-1 min-w-0">
+          {/* Label row */}
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-sm font-medium ${isComplete ? "text-[var(--success)]" : "text-[var(--foreground)]"}`}>
+              {isComplete ? currentStage.labelComplete : currentStage.label}
+            </span>
+            <span className="text-sm text-[var(--text-muted)] tabular-nums">
+              {effectiveProgress}%
+            </span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-2 bg-[var(--surface-elevated)] rounded-full overflow-hidden mb-1.5">
+            <motion.div
+              className={`h-full rounded-full ${isComplete ? "bg-[var(--success)]" : "bg-[var(--foreground)]"}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${effectiveProgress}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            />
+          </div>
+
+          {/* Description and time estimate */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-[var(--text-muted)] truncate">
+              {isComplete ? currentStage.descriptionComplete : currentStage.description}
+            </p>
+            {timeRemaining !== null && (
+              <span className="text-xs text-[var(--text-muted)] tabular-nums flex-shrink-0 ml-2">
+                ~{timeRemaining}s
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </motion.div>
   );

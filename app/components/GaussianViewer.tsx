@@ -211,20 +211,40 @@ export default function GaussianViewer({
           if (videoAnimationRef.current.active && !mini) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-            // Dynamic camera movement with orbiting and panning
-            // Creates cinematic movement that showcases the 3D scene
-            const orbitSpeed = 0.15; // Orbital rotation speed
-            const panSpeed = 0.08; // Vertical pan speed
-            const driftSpeed = 0.12; // Drift variation speed
-            const baseDistance = 1.4; // Distance from center
-            const orbitRadius = 0.4; // How far to move side to side
-            const panAmount = 0.25; // Vertical movement range
+            // Controlled camera movement optimized to showcase 3D depth effects
+            // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
             
-            // Combine orbital motion with subtle drifting for organic movement
-            const orbitAngle = elapsed * orbitSpeed;
-            const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.1;
-            const y = Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.08;
-            const z = -baseDistance + Math.cos(orbitAngle * 0.5) * 0.2 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
+            // Phase 1: Slow, controlled speed for smooth cinematic feel
+            const primarySpeed = 0.12; // Main rotation speed
+            const secondarySpeed = 0.09; // Secondary movement for figure-8
+            const dollySpeed = 0.15; // Forward/backward movement speed
+            
+            // Keep camera close and focused for maximum parallax effect
+            const baseDistance = 1.2; // Close to subject for depth emphasis
+            const orbitRadius = 0.3; // Tight horizontal movement
+            const verticalRange = 0.15; // Subtle vertical movement
+            const dollyRange = 0.25; // Forward/backward dolly for depth
+            
+            // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
+            // The 2x frequency on one axis creates the figure-8 pattern
+            const t = elapsed * primarySpeed;
+            const t2 = elapsed * secondarySpeed;
+            
+            // Lemniscate parametric equations, scaled and smoothed
+            const lemniscateX = Math.sin(t) * orbitRadius;
+            const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+            
+            // Dolly movement (forward/backward) to emphasize depth parallax
+            // This is the key to showing off 3D - moving through the scene
+            const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+            
+            // Gentle vertical drift to add dimensionality
+            const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
+            
+            // Compose final camera position
+            const x = lemniscateX;
+            const y = verticalOffset;
+            const z = -baseDistance + lemniscateZ + dollyOffset;
 
             camera.position.set(x, y, z);
             camera.lookAt(0, 0, 0);
@@ -459,20 +479,41 @@ export default function GaussianViewer({
         if (videoAnimationRef.current.active && !mini) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-          // Dynamic camera movement with orbiting and panning
-          // Creates cinematic movement that showcases the 3D scene
-          const orbitSpeed = 0.15; // Orbital rotation speed
-          const panSpeed = 0.08; // Vertical pan speed
-          const driftSpeed = 0.12; // Drift variation speed
-          const baseDistance = 1.8; // Distance from center
-          const orbitRadius = 0.5; // How far to move side to side
-          const panAmount = 0.3; // Vertical movement range
+          // Controlled camera movement optimized to showcase 3D depth effects
+          // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
           
-          // Combine orbital motion with subtle drifting for organic movement
-          const orbitAngle = elapsed * orbitSpeed;
-          const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.12;
-          const y = 0.8 + Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.1;
-          const z = baseDistance + Math.cos(orbitAngle * 0.5) * 0.25 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
+          // Phase 1: Slow, controlled speed for smooth cinematic feel
+          const primarySpeed = 0.12; // Main rotation speed
+          const secondarySpeed = 0.09; // Secondary movement for figure-8
+          const dollySpeed = 0.15; // Forward/backward movement speed
+          
+          // Keep camera close and focused for maximum parallax effect
+          const baseDistance = 1.6; // Distance from center (slightly further for GLB models)
+          const baseHeight = 0.6; // Slightly elevated viewpoint
+          const orbitRadius = 0.35; // Tight horizontal movement
+          const verticalRange = 0.2; // Subtle vertical movement
+          const dollyRange = 0.3; // Forward/backward dolly for depth
+          
+          // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
+          // The 2x frequency on one axis creates the figure-8 pattern
+          const t = elapsed * primarySpeed;
+          const t2 = elapsed * secondarySpeed;
+          
+          // Lemniscate parametric equations, scaled and smoothed
+          const lemniscateX = Math.sin(t) * orbitRadius;
+          const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+          
+          // Dolly movement (forward/backward) to emphasize depth parallax
+          // This is the key to showing off 3D - moving through the scene
+          const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+          
+          // Gentle vertical drift to add dimensionality
+          const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
+          
+          // Compose final camera position
+          const x = lemniscateX;
+          const y = baseHeight + verticalOffset;
+          const z = baseDistance + lemniscateZ + dollyOffset;
 
           camera.position.set(x, y, z);
           camera.lookAt(0, 0, 0);
@@ -776,8 +817,8 @@ export default function GaussianViewer({
             }`}
           />
 
-          {/* Loading overlay - hidden in mini mode */}
-          {isLoading && !mini && (
+          {/* Loading overlay - hidden in mini mode and when regenerating (keep scene visible) */}
+          {isLoading && !mini && !isRegenerating && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -829,7 +870,7 @@ export default function GaussianViewer({
             </motion.div>
           )}
 
-          {/* Regenerating overlay effect */}
+          {/* Regenerating overlay effect with animated wave ripples */}
           <AnimatePresence>
             {isRegenerating && !mini && (
               <motion.div
@@ -837,10 +878,20 @@ export default function GaussianViewer({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-0 z-30 pointer-events-none"
+                className="absolute inset-0 z-30 pointer-events-none overflow-hidden"
               >
+                {/* Animated wave ripples emanating from center */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="regenerate-wave regenerate-wave-1" />
+                  <div className="regenerate-wave regenerate-wave-2" />
+                  <div className="regenerate-wave regenerate-wave-3" />
+                </div>
+                
                 {/* Pulsing border glow */}
                 <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
+                
+                {/* Scanning line effect */}
+                <div className="absolute inset-0 regenerate-scan-line" />
                 
                 {/* Updating badge */}
                 <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>
@@ -853,23 +904,9 @@ export default function GaussianViewer({
                         : "glass text-[var(--foreground)]"
                     }`}
                   >
-                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
                     Regenerating...
                   </motion.div>
-                </div>
-
-                {/* Subtle scan line effect */}
-                <div className="absolute inset-0 overflow-hidden rounded-2xl">
-                  <motion.div
-                    className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent)]/30 to-transparent"
-                    initial={{ top: "-4px" }}
-                    animate={{ top: "100%" }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
                 </div>
               </motion.div>
             )}

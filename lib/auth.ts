@@ -3,8 +3,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
 import { prisma } from "./prisma";
 
-// Free tier limit
-export const FREE_SCENE_LIMIT = 10;
+// Free tier limit (override with Infinity in local dev for easier testing)
+export const FREE_SCENE_LIMIT = process.env.NODE_ENV === "development" ? Infinity : 10;
 
 // Check if we have all required env vars for auth
 const hasAuthConfig = 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
 
@@ -10,12 +10,46 @@ interface FollowupInputProps {
   disabled?: boolean;
 }
 
+// Format seconds to "Xm Ys" or "Xs"
+function formatTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}m ${secs}s`;
+}
+
 export default function FollowupInput({
   onSubmit,
   isLoading = false,
   disabled = false,
 }: FollowupInputProps) {
   const [followup, setFollowup] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Start/stop timer based on loading state
+  useEffect(() => {
+    if (isLoading) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setElapsedSeconds(0);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isLoading]);
 
   const handleSubmit = () => {
     if (disabled || isLoading) return;
@@ -66,7 +100,10 @@ export default function FollowupInput({
         </button>
       </div>
       <p className="text-xs text-[var(--text-muted)] mt-2 px-1">
-        Describe changes to regenerate the 3D scene
+        {isLoading 
+          ? `Regenerating • ${formatTime(elapsedSeconds)} elapsed`
+          : "Describe changes to regenerate the 3D scene"
+        }
       </p>
     </motion.div>
   );
