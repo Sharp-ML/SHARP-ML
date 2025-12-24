@@ -105,7 +105,7 @@ export default function ImageUpload({
       <div
         {...getRootProps()}
         onClick={disabled ? handleDisabledClick : getRootProps().onClick}
-        className={`upload-zone relative ${isDragActive ? "active" : ""} ${
+        className={`upload-zone relative min-h-[256px] flex flex-col justify-center ${isDragActive ? "active" : ""} ${
           disabled ? "opacity-50 cursor-not-allowed" : ""
         }`}
       >

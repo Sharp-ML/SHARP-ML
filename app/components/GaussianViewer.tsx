@@ -10,6 +10,7 @@ import {
   Video,
   Box,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { LayersIcon } from "@/components/ui/layers";
 import * as THREE from "three";
@@ -27,6 +28,8 @@ interface GaussianViewerProps {
   debugError?: boolean | string;
   /** Mini mode: auto-rotate, no controls, no overlays - for small previews */
   mini?: boolean;
+  /** Show regenerating visual effect */
+  isRegenerating?: boolean;
 }
 
 export default function GaussianViewer({
@@ -35,6 +38,7 @@ export default function GaussianViewer({
   debugLoading,
   debugError,
   mini = false,
+  isRegenerating = false,
 }: GaussianViewerProps) {
   const sceneContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,7 +122,7 @@ export default function GaussianViewer({
         rendererRef.current = renderer;
 
         // Create camera
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
         camera.position.set(0, 0, -3);
         camera.up.set(0, -1, 0);
         camera.lookAt(0, 0, 0);
@@ -128,10 +132,10 @@ export default function GaussianViewer({
         controls.enableDamping = true;
         controls.dampingFactor = 0.1; // Smoother damping
         controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
-        controls.enableZoom = !mini; // Disable zoom in mini mode
+        controls.enableZoom = false; // We'll handle zoom ourselves to allow flying through
         controls.zoomSpeed = 1.2;
-        controls.minDistance = 0.5; // Prevent zooming too close
-        controls.maxDistance = 10; // Prevent zooming too far
+        controls.minDistance = 0;
+        controls.maxDistance = Infinity;
         controls.enablePan = !mini; // Disable panning in mini mode
         controls.panSpeed = 0.8;
         controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
@@ -148,6 +152,26 @@ export default function GaussianViewer({
         };
         controls.enabled = true; // Always enable controls for interaction
         controlsRef.current = controls;
+        
+        // Custom wheel handler to allow flying through the scene (not just zooming to target)
+        if (!mini) {
+          const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            if (videoAnimationRef.current.active) return;
+            
+            const dollySpeed = 0.002;
+            const delta = e.deltaY * dollySpeed;
+            
+            // Get camera forward direction and move both camera and target
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            
+            camera.position.addScaledVector(forward, -delta);
+            controls.target.addScaledVector(forward, -delta);
+          };
+          
+          renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+        }
 
         // Create viewer with our renderer and camera, manual mode
         const viewer = new GaussianSplats3D.Viewer({
@@ -187,20 +211,40 @@ export default function GaussianViewer({
           if (videoAnimationRef.current.active && !mini) {
             const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-            // Dynamic camera movement with orbiting and panning
-            // Creates cinematic movement that showcases the 3D scene
-            const orbitSpeed = 0.15; // Orbital rotation speed
-            const panSpeed = 0.08; // Vertical pan speed
-            const driftSpeed = 0.12; // Drift variation speed
-            const baseDistance = 1.4; // Distance from center
-            const orbitRadius = 0.4; // How far to move side to side
-            const panAmount = 0.25; // Vertical movement range
+            // Controlled camera movement optimized to showcase 3D depth effects
+            // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
             
-            // Combine orbital motion with subtle drifting for organic movement
-            const orbitAngle = elapsed * orbitSpeed;
-            const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.1;
-            const y = Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.08;
-            const z = -baseDistance + Math.cos(orbitAngle * 0.5) * 0.2 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
+            // Phase 1: Slow, controlled speed for smooth cinematic feel
+            const primarySpeed = 0.12; // Main rotation speed
+            const secondarySpeed = 0.09; // Secondary movement for figure-8
+            const dollySpeed = 0.15; // Forward/backward movement speed
+            
+            // Keep camera close and focused for maximum parallax effect
+            const baseDistance = 1.2; // Close to subject for depth emphasis
+            const orbitRadius = 0.3; // Tight horizontal movement
+            const verticalRange = 0.15; // Subtle vertical movement
+            const dollyRange = 0.25; // Forward/backward dolly for depth
+            
+            // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
+            // The 2x frequency on one axis creates the figure-8 pattern
+            const t = elapsed * primarySpeed;
+            const t2 = elapsed * secondarySpeed;
+            
+            // Lemniscate parametric equations, scaled and smoothed
+            const lemniscateX = Math.sin(t) * orbitRadius;
+            const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+            
+            // Dolly movement (forward/backward) to emphasize depth parallax
+            // This is the key to showing off 3D - moving through the scene
+            const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+            
+            // Gentle vertical drift to add dimensionality
+            const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
+            
+            // Compose final camera position
+            const x = lemniscateX;
+            const y = verticalOffset;
+            const z = -baseDistance + lemniscateZ + dollyOffset;
 
             camera.position.set(x, y, z);
             camera.lookAt(0, 0, 0);
@@ -295,7 +339,7 @@ export default function GaussianViewer({
       scene.background = new THREE.Color(0x1a1a1a);
 
       // Create camera
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
       camera.position.set(0, 1, 3);
 
       // Create renderer
@@ -317,10 +361,10 @@ export default function GaussianViewer({
       controls.enableDamping = true;
       controls.dampingFactor = 0.1; // Smoother damping
       controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
-      controls.enableZoom = !mini; // Disable zoom in mini mode
+      controls.enableZoom = false; // We'll handle zoom ourselves to allow flying through
       controls.zoomSpeed = 1.2;
-      controls.minDistance = 0.5; // Prevent zooming too close
-      controls.maxDistance = 15; // Prevent zooming too far
+      controls.minDistance = 0;
+      controls.maxDistance = Infinity;
       controls.enablePan = !mini; // Disable panning in mini mode
       controls.panSpeed = 0.8;
       controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
@@ -336,6 +380,26 @@ export default function GaussianViewer({
       };
       controls.enabled = true; // Always enable controls for interaction
       controlsRef.current = controls;
+      
+      // Custom wheel handler to allow flying through the scene (not just zooming to target)
+      if (!mini) {
+        const handleWheel = (e: WheelEvent) => {
+          e.preventDefault();
+          if (videoAnimationRef.current.active) return;
+          
+          const dollySpeed = 0.002;
+          const delta = e.deltaY * dollySpeed;
+          
+          // Get camera forward direction and move both camera and target
+          const forward = new THREE.Vector3();
+          camera.getWorldDirection(forward);
+          
+          camera.position.addScaledVector(forward, -delta);
+          controls.target.addScaledVector(forward, -delta);
+        };
+        
+        renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+      }
 
       // Add lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -415,20 +479,41 @@ export default function GaussianViewer({
         if (videoAnimationRef.current.active && !mini) {
           const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
-          // Dynamic camera movement with orbiting and panning
-          // Creates cinematic movement that showcases the 3D scene
-          const orbitSpeed = 0.15; // Orbital rotation speed
-          const panSpeed = 0.08; // Vertical pan speed
-          const driftSpeed = 0.12; // Drift variation speed
-          const baseDistance = 1.8; // Distance from center
-          const orbitRadius = 0.5; // How far to move side to side
-          const panAmount = 0.3; // Vertical movement range
+          // Controlled camera movement optimized to showcase 3D depth effects
+          // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
           
-          // Combine orbital motion with subtle drifting for organic movement
-          const orbitAngle = elapsed * orbitSpeed;
-          const x = Math.sin(orbitAngle) * orbitRadius + Math.sin(elapsed * driftSpeed * 1.3) * 0.12;
-          const y = 0.8 + Math.sin(elapsed * panSpeed) * panAmount + Math.cos(elapsed * driftSpeed * 0.9) * 0.1;
-          const z = baseDistance + Math.cos(orbitAngle * 0.5) * 0.25 + Math.sin(elapsed * driftSpeed * 0.7) * 0.1;
+          // Phase 1: Slow, controlled speed for smooth cinematic feel
+          const primarySpeed = 0.12; // Main rotation speed
+          const secondarySpeed = 0.09; // Secondary movement for figure-8
+          const dollySpeed = 0.15; // Forward/backward movement speed
+          
+          // Keep camera close and focused for maximum parallax effect
+          const baseDistance = 1.6; // Distance from center (slightly further for GLB models)
+          const baseHeight = 0.6; // Slightly elevated viewpoint
+          const orbitRadius = 0.35; // Tight horizontal movement
+          const verticalRange = 0.2; // Subtle vertical movement
+          const dollyRange = 0.3; // Forward/backward dolly for depth
+          
+          // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
+          // The 2x frequency on one axis creates the figure-8 pattern
+          const t = elapsed * primarySpeed;
+          const t2 = elapsed * secondarySpeed;
+          
+          // Lemniscate parametric equations, scaled and smoothed
+          const lemniscateX = Math.sin(t) * orbitRadius;
+          const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+          
+          // Dolly movement (forward/backward) to emphasize depth parallax
+          // This is the key to showing off 3D - moving through the scene
+          const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+          
+          // Gentle vertical drift to add dimensionality
+          const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
+          
+          // Compose final camera position
+          const x = lemniscateX;
+          const y = baseHeight + verticalOffset;
+          const z = baseDistance + lemniscateZ + dollyOffset;
 
           camera.position.set(x, y, z);
           camera.lookAt(0, 0, 0);
@@ -557,6 +642,29 @@ export default function GaussianViewer({
     link.click();
   };
 
+  const handleReset = () => {
+    const viewer = viewerRef.current as { 
+      camera?: THREE.PerspectiveCamera; 
+      controls?: OrbitControls;
+    } | null;
+    
+    if (viewer?.camera && viewer?.controls) {
+      // Reset camera to initial position based on model type
+      if (modelType === "ply") {
+        viewer.camera.position.set(0, 0, -3);
+        viewer.camera.up.set(0, -1, 0);
+      } else {
+        viewer.camera.position.set(0, 1, 3);
+        viewer.camera.up.set(0, 1, 0);
+      }
+      
+      // Reset controls target to center
+      viewer.controls.target.set(0, 0, 0);
+      viewer.camera.lookAt(0, 0, 0);
+      viewer.controls.update();
+    }
+  };
+
   // Handle resize when expanded/collapsed
   useEffect(() => {
     const handleResize = () => {
@@ -621,9 +729,11 @@ export default function GaussianViewer({
   useEffect(() => {
     if (viewMode === "video") {
       videoAnimationRef.current = { startTime: Date.now(), active: true };
-      // Disable controls when in video mode
+      // Disable controls when in video mode and reset target to center
       if (controlsRef.current) {
         controlsRef.current.enabled = false;
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
       }
     } else {
       videoAnimationRef.current = { startTime: 0, active: false };
@@ -707,8 +817,8 @@ export default function GaussianViewer({
             }`}
           />
 
-          {/* Loading overlay - hidden in mini mode */}
-          {isLoading && !mini && (
+          {/* Loading overlay - hidden in mini mode and when regenerating (keep scene visible) */}
+          {isLoading && !mini && !isRegenerating && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -760,6 +870,38 @@ export default function GaussianViewer({
             </motion.div>
           )}
 
+          {/* Regenerating overlay effect */}
+          <AnimatePresence>
+            {isRegenerating && !mini && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 z-30 pointer-events-none"
+              >
+                {/* Pulsing border glow */}
+                <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
+                
+                {/* Updating badge */}
+                <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-medium ${
+                      isExpanded
+                        ? "bg-white/10 backdrop-blur-sm border border-white/20 text-white"
+                        : "glass text-[var(--foreground)]"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                    Regenerating...
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Controls overlay - hidden in mini mode */}
           {!isLoading && !error && !mini && (
             <>
@@ -778,6 +920,23 @@ export default function GaussianViewer({
                     <X className="w-5 h-5 text-white" />
                   </button>
                 )}
+                
+                {/* Reset button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReset();
+                  }}
+                  className={`flex items-center justify-center transition-all cursor-pointer ${
+                    isExpanded
+                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      : "p-2.5 rounded-xl glass hover:bg-white/10"
+                  }`}
+                  title="Reset view"
+                >
+                  <RotateCcw className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                </button>
                 
                 {/* Expand button when not expanded */}
                 {!isExpanded && (
@@ -834,7 +993,7 @@ export default function GaussianViewer({
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Move3D className="w-3.5 h-3.5" />
-                        Scroll to zoom
+                        Scroll to fly through
                       </span>
                     </div>
                   </motion.div>
