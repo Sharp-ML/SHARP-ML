@@ -884,6 +884,18 @@ function HomeContent() {
             >
               Upgrade Modal
             </button>
+            <button
+              onClick={() => setUserUsage({ sceneCount: 10, isPaid: false, remainingUploads: 0 })}
+              className={`px-2 py-1 rounded ${userUsage?.remainingUploads === 0 ? "bg-yellow-500" : "bg-yellow-500/50 hover:bg-yellow-500/70"}`}
+            >
+              Max Limit
+            </button>
+            <button
+              onClick={() => setUserUsage({ sceneCount: 0, isPaid: false, remainingUploads: 10 })}
+              className="px-2 py-1 rounded bg-green-500/50 hover:bg-green-500/70"
+            >
+              Reset Limit
+            </button>
           </div>
           {/* 3D Viewer Debug Controls */}
           {appState === "viewing" && (
@@ -1037,7 +1049,6 @@ function HomeContent() {
                         <PromptInput
                           onSubmit={handlePromptSubmit}
                           disabled={!canUpload}
-                          onDisabledClick={() => setShowUpgradeModal(true)}
                         />
                       </motion.div>
                     )}

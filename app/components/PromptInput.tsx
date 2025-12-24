@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 // Short chip labels for UI display, with full prompts for generation (naturalistic aesthetic)
 const PROMPT_CHIPS = [
@@ -23,13 +24,11 @@ const PROMPT_CHIPS = [
 interface PromptInputProps {
   onSubmit: (prompt: string) => void;
   disabled?: boolean;
-  onDisabledClick?: () => void;
 }
 
 export default function PromptInput({
   onSubmit,
   disabled,
-  onDisabledClick,
 }: PromptInputProps) {
   const [prompt, setPrompt] = useState("");
 
@@ -41,7 +40,23 @@ export default function PromptInput({
 
   const handleSubmit = () => {
     if (disabled) {
-      onDisabledClick?.();
+      toast("Limit 10/10 reached", {
+        description: "You've used all your free generations.",
+        duration: Infinity,
+        action: {
+          label: "Contact Support",
+          onClick: () => {
+            window.open(
+              "https://x.com/messages/compose?recipient_id=1325862778603769856",
+              "_blank"
+            );
+          },
+        },
+        cancel: {
+          label: "Dismiss",
+          onClick: () => {},
+        },
+      });
       return;
     }
     if (prompt.trim()) {
@@ -50,10 +65,7 @@ export default function PromptInput({
   };
 
   const handleChipClick = (chip: typeof PROMPT_CHIPS[0]) => {
-    if (disabled) {
-      onDisabledClick?.();
-      return;
-    }
+    // Always allow selecting a chip to fill the prompt field
     setPrompt(chip.prompt);
   };
 
@@ -71,7 +83,7 @@ export default function PromptInput({
       transition={{ duration: 0.3 }}
       className="w-full"
     >
-      <div className={`min-h-[265.5px] flex flex-col ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
+      <div className="min-h-[265.5px] flex flex-col">
         <div className="flex flex-col gap-4 my-auto">
           {/* Textarea with submit button */}
           <div className="relative w-full">
@@ -80,13 +92,12 @@ export default function PromptInput({
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Describe your 3D scene..."
-              disabled={disabled}
               style={{ scrollPaddingBlock: '1rem' }}
-              className="w-full h-32 px-4 py-4 pr-16 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--foreground)]/20 focus:border-[var(--foreground)]/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base overflow-y-auto box-border"
+              className="w-full h-32 px-4 py-4 pr-16 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--foreground)]/20 focus:border-[var(--foreground)]/40 transition-all text-base overflow-y-auto box-border"
             />
             <button
               onClick={handleSubmit}
-              disabled={disabled || !prompt.trim()}
+              disabled={!prompt.trim()}
               className="absolute right-2 bottom-4 p-2.5 rounded-lg bg-[var(--foreground)] text-[var(--background)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-all"
               aria-label="Generate 3D Scene"
             >
@@ -106,8 +117,7 @@ export default function PromptInput({
                   duration: 0.2
                 }}
                 onClick={() => handleChipClick(chip)}
-                disabled={disabled}
-                className="px-3 py-1.5 text-xs rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] hover:text-[var(--foreground)] transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-3 py-1.5 text-xs rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] hover:text-[var(--foreground)] transition-all whitespace-nowrap"
               >
                 {chip.label}
               </motion.button>
