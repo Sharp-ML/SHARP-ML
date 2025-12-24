@@ -10,6 +10,7 @@ import {
   Video,
   Box,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { LayersIcon } from "@/components/ui/layers";
 import * as THREE from "three";
@@ -27,6 +28,8 @@ interface GaussianViewerProps {
   debugError?: boolean | string;
   /** Mini mode: auto-rotate, no controls, no overlays - for small previews */
   mini?: boolean;
+  /** Show regenerating visual effect */
+  isRegenerating?: boolean;
 }
 
 export default function GaussianViewer({
@@ -35,6 +38,7 @@ export default function GaussianViewer({
   debugLoading,
   debugError,
   mini = false,
+  isRegenerating = false,
 }: GaussianViewerProps) {
   const sceneContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,7 +122,7 @@ export default function GaussianViewer({
         rendererRef.current = renderer;
 
         // Create camera
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
         camera.position.set(0, 0, -3);
         camera.up.set(0, -1, 0);
         camera.lookAt(0, 0, 0);
@@ -128,10 +132,10 @@ export default function GaussianViewer({
         controls.enableDamping = true;
         controls.dampingFactor = 0.1; // Smoother damping
         controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
-        controls.enableZoom = !mini; // Disable zoom in mini mode
+        controls.enableZoom = false; // We'll handle zoom ourselves to allow flying through
         controls.zoomSpeed = 1.2;
-        controls.minDistance = 0.5; // Prevent zooming too close
-        controls.maxDistance = 10; // Prevent zooming too far
+        controls.minDistance = 0;
+        controls.maxDistance = Infinity;
         controls.enablePan = !mini; // Disable panning in mini mode
         controls.panSpeed = 0.8;
         controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
@@ -148,6 +152,26 @@ export default function GaussianViewer({
         };
         controls.enabled = true; // Always enable controls for interaction
         controlsRef.current = controls;
+        
+        // Custom wheel handler to allow flying through the scene (not just zooming to target)
+        if (!mini) {
+          const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            if (videoAnimationRef.current.active) return;
+            
+            const dollySpeed = 0.002;
+            const delta = e.deltaY * dollySpeed;
+            
+            // Get camera forward direction and move both camera and target
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            
+            camera.position.addScaledVector(forward, -delta);
+            controls.target.addScaledVector(forward, -delta);
+          };
+          
+          renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+        }
 
         // Create viewer with our renderer and camera, manual mode
         const viewer = new GaussianSplats3D.Viewer({
@@ -295,7 +319,7 @@ export default function GaussianViewer({
       scene.background = new THREE.Color(0x1a1a1a);
 
       // Create camera
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
       camera.position.set(0, 1, 3);
 
       // Create renderer
@@ -317,10 +341,10 @@ export default function GaussianViewer({
       controls.enableDamping = true;
       controls.dampingFactor = 0.1; // Smoother damping
       controls.rotateSpeed = mini ? 1.2 : 0.8; // Faster rotation in mini for responsiveness
-      controls.enableZoom = !mini; // Disable zoom in mini mode
+      controls.enableZoom = false; // We'll handle zoom ourselves to allow flying through
       controls.zoomSpeed = 1.2;
-      controls.minDistance = 0.5; // Prevent zooming too close
-      controls.maxDistance = 15; // Prevent zooming too far
+      controls.minDistance = 0;
+      controls.maxDistance = Infinity;
       controls.enablePan = !mini; // Disable panning in mini mode
       controls.panSpeed = 0.8;
       controls.screenSpacePanning = true; // Pan in screen space (more intuitive)
@@ -336,6 +360,26 @@ export default function GaussianViewer({
       };
       controls.enabled = true; // Always enable controls for interaction
       controlsRef.current = controls;
+      
+      // Custom wheel handler to allow flying through the scene (not just zooming to target)
+      if (!mini) {
+        const handleWheel = (e: WheelEvent) => {
+          e.preventDefault();
+          if (videoAnimationRef.current.active) return;
+          
+          const dollySpeed = 0.002;
+          const delta = e.deltaY * dollySpeed;
+          
+          // Get camera forward direction and move both camera and target
+          const forward = new THREE.Vector3();
+          camera.getWorldDirection(forward);
+          
+          camera.position.addScaledVector(forward, -delta);
+          controls.target.addScaledVector(forward, -delta);
+        };
+        
+        renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+      }
 
       // Add lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -557,6 +601,29 @@ export default function GaussianViewer({
     link.click();
   };
 
+  const handleReset = () => {
+    const viewer = viewerRef.current as { 
+      camera?: THREE.PerspectiveCamera; 
+      controls?: OrbitControls;
+    } | null;
+    
+    if (viewer?.camera && viewer?.controls) {
+      // Reset camera to initial position based on model type
+      if (modelType === "ply") {
+        viewer.camera.position.set(0, 0, -3);
+        viewer.camera.up.set(0, -1, 0);
+      } else {
+        viewer.camera.position.set(0, 1, 3);
+        viewer.camera.up.set(0, 1, 0);
+      }
+      
+      // Reset controls target to center
+      viewer.controls.target.set(0, 0, 0);
+      viewer.camera.lookAt(0, 0, 0);
+      viewer.controls.update();
+    }
+  };
+
   // Handle resize when expanded/collapsed
   useEffect(() => {
     const handleResize = () => {
@@ -621,9 +688,11 @@ export default function GaussianViewer({
   useEffect(() => {
     if (viewMode === "video") {
       videoAnimationRef.current = { startTime: Date.now(), active: true };
-      // Disable controls when in video mode
+      // Disable controls when in video mode and reset target to center
       if (controlsRef.current) {
         controlsRef.current.enabled = false;
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
       }
     } else {
       videoAnimationRef.current = { startTime: 0, active: false };
@@ -760,6 +829,52 @@ export default function GaussianViewer({
             </motion.div>
           )}
 
+          {/* Regenerating overlay effect */}
+          <AnimatePresence>
+            {isRegenerating && !mini && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 z-30 pointer-events-none"
+              >
+                {/* Pulsing border glow */}
+                <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
+                
+                {/* Updating badge */}
+                <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-medium ${
+                      isExpanded
+                        ? "bg-white/10 backdrop-blur-sm border border-white/20 text-white"
+                        : "glass text-[var(--foreground)]"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                    Regenerating...
+                  </motion.div>
+                </div>
+
+                {/* Subtle scan line effect */}
+                <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                  <motion.div
+                    className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent)]/30 to-transparent"
+                    initial={{ top: "-4px" }}
+                    animate={{ top: "100%" }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Controls overlay - hidden in mini mode */}
           {!isLoading && !error && !mini && (
             <>
@@ -778,6 +893,23 @@ export default function GaussianViewer({
                     <X className="w-5 h-5 text-white" />
                   </button>
                 )}
+                
+                {/* Reset button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReset();
+                  }}
+                  className={`flex items-center justify-center transition-all cursor-pointer ${
+                    isExpanded
+                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      : "p-2.5 rounded-xl glass hover:bg-white/10"
+                  }`}
+                  title="Reset view"
+                >
+                  <RotateCcw className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                </button>
                 
                 {/* Expand button when not expanded */}
                 {!isExpanded && (
@@ -834,7 +966,7 @@ export default function GaussianViewer({
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Move3D className="w-3.5 h-3.5" />
-                        Scroll to zoom
+                        Scroll to fly through
                       </span>
                     </div>
                   </motion.div>

@@ -141,6 +141,17 @@ body {
   background: rgba(0, 0, 0, 0.2);
 }
 
+/* Textarea scrollbar - contained within rounded corners */
+textarea {
+  overflow: clip auto;
+  scrollbar-gutter: stable;
+}
+
+textarea::-webkit-scrollbar-track {
+  border-radius: 0 0.75rem 0.75rem 0;
+  margin-block: 0.5rem;
+}
+
 /* Primary Button - Family/ConnectKit style (pill with arrow) */
 .btn-primary {
   background: var(--accent);
@@ -409,6 +420,24 @@ body {
 
 .fade-in {
   animation: fade-in 0.4s ease-out forwards;
+}
+
+/* Regenerating pulse animation for 3D viewer */
+@keyframes regenerate-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.15),
+                0 0 20px rgba(99, 102, 241, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: inset 0 0 50px rgba(99, 102, 241, 0.25),
+                0 0 40px rgba(99, 102, 241, 0.2);
+    transform: scale(1.005);
+  }
+}
+
+.animate-regenerate-pulse {
+  animation: regenerate-pulse 2s ease-in-out infinite;
 }
 
 /* Stagger children */

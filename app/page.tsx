@@ -17,9 +17,13 @@ import {
   HelpCircle,
   LogOut,
   MessageCircle,
+  Upload,
+  Wand2,
 } from "lucide-react";
 import Image from "next/image";
 import ImageUpload from "./components/ImageUpload";
+import PromptInput from "./components/PromptInput";
+import FollowupInput from "./components/FollowupInput";
 import GaussianViewer from "./components/GaussianViewer";
 import ProcessingStatus from "./components/ProcessingStatus";
 import PixelatedImage from "./components/PixelatedImage";
@@ -94,6 +98,7 @@ function HomeContent() {
   const { data: session, update: updateSession } = useSession();
   
   const [appState, setAppState] = useState<AppState>("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "prompt">("prompt");
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
   const [progress, setProgress] = useState(0);
@@ -107,6 +112,10 @@ function HomeContent() {
   const [setupInstructions, setSetupInstructions] =
     useState<SetupInstructions | null>(null);
   const [currentSceneName, setCurrentSceneName] = useState<string | null>(null);
+  
+  // Regeneration state for follow-up prompts
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [originalPrompt, setOriginalPrompt] = useState<string | null>(null);
 
   // Usage tracking state
   const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
@@ -341,6 +350,256 @@ function HomeContent() {
     }
   }, [refreshScenes, canUpload]);
 
+  // Handle prompt submission - generates image then converts to 3D
+  const handlePromptSubmit = useCallback(async (prompt: string) => {
+    // Check if user can upload before proceeding
+    if (!canUpload) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setAppState("processing");
+    setProcessingStage("uploading");
+    setProgress(0);
+    setStageProgress(undefined);
+    setError(null);
+    setIsConfigError(false);
+    setSetupInstructions(null);
+
+    // Store the prompt as scene name (truncate if too long)
+    const sceneName = prompt.length > 50 ? prompt.substring(0, 47) + "..." : prompt;
+    setCurrentSceneName(sceneName);
+
+    try {
+      // Step 1: Generate image from prompt
+      setProgress(5);
+      
+      const generateResponse = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!generateResponse.ok) {
+        const data = await generateResponse.json();
+        if (data.setup) {
+          setIsConfigError(true);
+          setSetupInstructions(data.setup);
+        }
+        throw new Error(data.error || "Failed to generate image");
+      }
+
+      const generateData = await generateResponse.json();
+      setProgress(10);
+
+      // Set preview from generated image
+      setPreviewUrl(generateData.imageUrl);
+
+      // Step 2: Convert generated image to File and process to 3D
+      const imageResponse = await fetch(generateData.imageUrl);
+      const imageBlob = await imageResponse.blob();
+      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
+
+      // Continue with existing 3D processing flow
+      setProcessingStage("processing");
+      setStageProgress(0);
+
+      const formData = new FormData();
+      formData.append("image", imageFile);
+
+      setProgress(20);
+
+      // Start progress estimation timer
+      const estimatedDuration = 60000;
+      const startTime = Date.now();
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
+        const easedProgress = rawProgress < 50 
+          ? rawProgress 
+          : 50 + (rawProgress - 50) * 0.5;
+        setStageProgress(Math.min(95, easedProgress));
+      }, 500);
+
+      const response = await fetch("/api/process", {
+        method: "POST",
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setStageProgress(100);
+      setProgress(30);
+
+      if (response.status === 413) {
+        throw new Error("Generated image too large. Please try a different prompt.");
+      }
+      if (response.status === 401) {
+        throw new Error("Please sign in to continue.");
+      }
+      if (response.status === 402) {
+        setShowUpgradeModal(true);
+        throw new Error("You've reached your free limit. Upgrade to continue.");
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Server error. Please try again.");
+      }
+
+      if (!response.ok) {
+        if (data.setup) {
+          setIsConfigError(true);
+          setSetupInstructions(data.setup);
+          throw new Error(data.message || "Server configuration error");
+        }
+        if (data.requiresPayment) {
+          setShowUpgradeModal(true);
+        }
+        const errorMsg = data.details 
+          ? `${data.error}: ${data.details}` 
+          : data.error || "Processing failed";
+        throw new Error(errorMsg);
+      }
+
+      setStageProgress(undefined);
+
+      for (let i = 30; i <= 90; i += 10) {
+        await new Promise((r) => setTimeout(r, 200));
+        setProgress(i);
+      }
+
+      setProcessingStage("generating");
+      setProgress(95);
+      setProcessingStage("complete");
+      setProgress(100);
+
+      setModelUrl(data.modelUrl);
+      setModelType(data.modelType || "glb");
+      setImageUrl(data.imageUrl || null);
+
+      if (data.usage) {
+        setUserUsage({
+          sceneCount: data.usage.sceneCount,
+          isPaid: data.usage.isPaid,
+          remainingUploads: data.usage.remainingUploads,
+        });
+      }
+
+      // Store the original prompt for follow-up regeneration
+      setOriginalPrompt(prompt);
+
+      await refreshScenes();
+      await new Promise((r) => setTimeout(r, 500));
+      setAppState("viewing");
+    } catch (err) {
+      console.error("Prompt processing error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setProcessingStage("error");
+      setAppState("error");
+    }
+  }, [refreshScenes, canUpload]);
+
+  // Handle follow-up prompt submission - regenerates scene while keeping viewer visible
+  const handleFollowupSubmit = useCallback(async (followup: string) => {
+    // Check if user can upload before proceeding
+    if (!canUpload) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Combine original prompt with follow-up
+    const combinedPrompt = originalPrompt 
+      ? `${originalPrompt}. Additionally: ${followup}`
+      : followup;
+
+    setIsRegenerating(true);
+    setError(null);
+
+    try {
+      // Step 1: Generate new image from combined prompt
+      const generateResponse = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: combinedPrompt }),
+      });
+
+      if (!generateResponse.ok) {
+        const data = await generateResponse.json();
+        throw new Error(data.error || "Failed to generate image");
+      }
+
+      const generateData = await generateResponse.json();
+
+      // Update preview with new generated image
+      setPreviewUrl(generateData.imageUrl);
+
+      // Step 2: Convert generated image to File and process to 3D
+      const imageResponse = await fetch(generateData.imageUrl);
+      const imageBlob = await imageResponse.blob();
+      const sceneName = followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
+      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
+
+      const formData = new FormData();
+      formData.append("image", imageFile);
+
+      const response = await fetch("/api/process", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.status === 413) {
+        throw new Error("Generated image too large. Please try a different prompt.");
+      }
+      if (response.status === 401) {
+        throw new Error("Please sign in to continue.");
+      }
+      if (response.status === 402) {
+        setShowUpgradeModal(true);
+        throw new Error("You've reached your free limit. Upgrade to continue.");
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Server error. Please try again.");
+      }
+
+      if (!response.ok) {
+        const errorMsg = data.details 
+          ? `${data.error}: ${data.details}` 
+          : data.error || "Processing failed";
+        throw new Error(errorMsg);
+      }
+
+      // Update the model URL with the new scene
+      setModelUrl(data.modelUrl);
+      setModelType(data.modelType || "glb");
+      setImageUrl(data.imageUrl || null);
+      setCurrentSceneName(sceneName);
+
+      // Update the original prompt to include the follow-up for future iterations
+      setOriginalPrompt(combinedPrompt);
+
+      if (data.usage) {
+        setUserUsage({
+          sceneCount: data.usage.sceneCount,
+          isPaid: data.usage.isPaid,
+          remainingUploads: data.usage.remainingUploads,
+        });
+      }
+
+      await refreshScenes();
+    } catch (err) {
+      console.error("Followup processing error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [refreshScenes, canUpload, originalPrompt]);
+
   const handleReset = useCallback(() => {
     setAppState("upload");
     setProcessingStage("uploading");
@@ -354,6 +613,9 @@ function HomeContent() {
     setIsConfigError(false);
     setSetupInstructions(null);
     setCurrentSceneName(null);
+    // Clear regeneration state
+    setIsRegenerating(false);
+    setOriginalPrompt(null);
     // Clear URL parameters
     router.replace("/", { scroll: false });
   }, [router]);
@@ -368,6 +630,9 @@ function HomeContent() {
     setAppState("viewing");
     setError(null);
     setIsConfigError(false);
+    // Clear regeneration state - we don't have the original prompt for history scenes
+    setIsRegenerating(false);
+    setOriginalPrompt(null);
   }, []);
 
   // Debug controls - only show in development
@@ -608,18 +873,77 @@ function HomeContent() {
                   </motion.p>
                 </div>
 
-                {/* Upload Zone */}
+                {/* Tab Selector */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="mb-6"
+                >
+                  <div className="inline-flex p-1 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+                    <button
+                      onClick={() => setActiveTab("prompt")}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        activeTab === "prompt"
+                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      <Wand2 className="w-4 h-4" strokeWidth={2} />
+                      <span>Prompt</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("upload")}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        activeTab === "upload"
+                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" strokeWidth={2} />
+                      <span>Upload</span>
+                    </button>
+                  </div>
+                </motion.div>
+
+                {/* Upload Zone / Prompt Input */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                   className="mb-10"
                 >
-                  <ImageUpload 
-                    onImageSelect={handleImageSelect} 
-                    disabled={!canUpload}
-                    onDisabledClick={() => setShowUpgradeModal(true)}
-                  />
+                  <AnimatePresence mode="wait">
+                    {activeTab === "upload" ? (
+                      <motion.div
+                        key="upload-tab"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ImageUpload 
+                          onImageSelect={handleImageSelect} 
+                          disabled={!canUpload}
+                          onDisabledClick={() => setShowUpgradeModal(true)}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="prompt-tab"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <PromptInput
+                          onSubmit={handlePromptSubmit}
+                          disabled={!canUpload}
+                          onDisabledClick={() => setShowUpgradeModal(true)}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
 
                 {/* How it works OR Recent Scenes */}
@@ -698,19 +1022,7 @@ function HomeContent() {
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    // Features - minimal centered style
-                    <div className="mt-8 flex justify-center items-stretch gap-8 text-center">
-                      <div className="flex flex-col items-center justify-between py-4">
-                        <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
-                        <div className="text-xs text-[var(--text-muted)]">Scenes</div>
-                      </div>
-                      <div className="flex flex-col items-center justify-between py-4">
-                        <Sparkles className="size-6 text-[var(--primary)] opacity-30" />
-                        <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
-                      </div>
-                    </div>
-                  )}
+                  ) : null}
                 </motion.div>
               </motion.div>
             )}
@@ -771,6 +1083,7 @@ function HomeContent() {
                       onClick={handleReset}
                       className="icon-btn flex-shrink-0"
                       aria-label="Back to home"
+                      disabled={isRegenerating}
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
@@ -786,7 +1099,26 @@ function HomeContent() {
                   modelType={modelType}
                   debugLoading={viewerDebugLoading}
                   debugError={viewerDebugError}
+                  isRegenerating={isRegenerating}
                 />
+
+                {/* Follow-up Input for regeneration */}
+                <FollowupInput
+                  onSubmit={handleFollowupSubmit}
+                  isLoading={isRegenerating}
+                  disabled={!canUpload}
+                />
+
+                {/* Error message during regeneration */}
+                {error && isRegenerating === false && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-3 rounded-xl bg-[var(--error)]/10 border border-[var(--error)]/20 text-sm text-[var(--error)]"
+                  >
+                    {error}
+                  </motion.div>
+                )}
               </motion.div>
             )}
 
