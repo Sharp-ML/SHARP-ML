@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { toast } from "sonner";
 
 // Short chip labels for UI display, with full prompts for generation (naturalistic aesthetic)
 const PROMPT_CHIPS = [
@@ -24,11 +23,13 @@ const PROMPT_CHIPS = [
 interface PromptInputProps {
   onSubmit: (prompt: string) => void;
   disabled?: boolean;
+  onDisabledClick?: () => void;
 }
 
 export default function PromptInput({
   onSubmit,
   disabled,
+  onDisabledClick,
 }: PromptInputProps) {
   const [prompt, setPrompt] = useState("");
 
@@ -40,23 +41,7 @@ export default function PromptInput({
 
   const handleSubmit = () => {
     if (disabled) {
-      toast("Limit 10/10 reached", {
-        description: "You've used all your free generations.",
-        duration: Infinity,
-        action: {
-          label: "Contact Support",
-          onClick: () => {
-            window.open(
-              "https://x.com/messages/compose?recipient_id=1325862778603769856",
-              "_blank"
-            );
-          },
-        },
-        cancel: {
-          label: "Dismiss",
-          onClick: () => {},
-        },
-      });
+      onDisabledClick?.();
       return;
     }
     if (prompt.trim()) {
