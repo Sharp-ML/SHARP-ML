@@ -1064,7 +1064,7 @@ function HomeContent() {
                     transition={{ delay: 0.05 }}
                     className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-2"
                   >
-                    <span>2D</span>
+                    <span>Prompt</span>
                     <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                     <span>3D</span>
                   </motion.h1>
@@ -1075,7 +1075,7 @@ function HomeContent() {
                     transition={{ delay: 0.1 }}
                     className="text-base sm:text-lg text-[var(--text-muted)] leading-snug"
                   >
-                    Transform any photo into an interactive 3D scene.
+                    Transform any prompt into an interactive 3D scene.
                   </motion.p>
                 </div>
 
