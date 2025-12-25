@@ -13,16 +13,12 @@ import {
   Clock,
   Trash2,
   ChevronRight,
-  Sparkles,
   HelpCircle,
   LogOut,
   MessageCircle,
-  Upload,
-  Wand2,
 } from "lucide-react";
 import { ImageIcon } from "@/components/ui/image";
 import Image from "next/image";
-import ImageUpload from "./components/ImageUpload";
 import PromptInput from "./components/PromptInput";
 import FollowupInput from "./components/FollowupInput";
 import GaussianViewer from "./components/GaussianViewer";
@@ -100,7 +96,6 @@ function HomeContent() {
   const { data: session, update: updateSession } = useSession();
   
   const [appState, setAppState] = useState<AppState>("upload");
-  const [activeTab, setActiveTab] = useState<"upload" | "prompt">("prompt");
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
   const [processingMode, setProcessingMode] = useState<"upload" | "prompt">("upload");
@@ -1079,77 +1074,19 @@ function HomeContent() {
                   </motion.p>
                 </div>
 
-                {/* Tab Selector */}
+                {/* Prompt Input */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="mb-6"
-                >
-                  <div className="inline-flex p-1 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-                    <button
-                      onClick={() => setActiveTab("prompt")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        activeTab === "prompt"
-                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-                      }`}
-                    >
-                      <Wand2 className="w-4 h-4" strokeWidth={2} />
-                      <span>Prompt</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("upload")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        activeTab === "upload"
-                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-                      }`}
-                    >
-                      <Upload className="w-4 h-4" strokeWidth={2} />
-                      <span>Upload</span>
-                    </button>
-                  </div>
-                </motion.div>
-
-                {/* Upload Zone / Prompt Input */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
                   className="mb-10"
                 >
-                  <AnimatePresence mode="wait">
-                    {activeTab === "upload" ? (
-                      <motion.div
-                        key="upload-tab"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ImageUpload 
-                          onImageSelect={handleImageSelect} 
-                          disabled={!canUpload}
-                          onDisabledClick={() => setShowUpgradeModal(true)}
-                        />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="prompt-tab"
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <PromptInput
-                          onSubmit={handlePromptSubmit}
-                          disabled={!canUpload}
-                          onDisabledClick={() => setShowUpgradeModal(true)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <PromptInput
+                    onSubmit={handlePromptSubmit}
+                    onImageSelect={handleImageSelect}
+                    disabled={!canUpload}
+                    onDisabledClick={() => setShowUpgradeModal(true)}
+                  />
                 </motion.div>
 
                 {/* How it works OR Recent Scenes */}
@@ -1238,7 +1175,7 @@ function HomeContent() {
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                             </div>
                             {/* Info */}
-                            <div className="flex-1 min-w-0 pr-8">
+                            <div className="flex-1 min-w-0 pr-16">
                               <p className="text-sm font-medium truncate">
                                 {scene.name}
                               </p>
@@ -1282,32 +1219,28 @@ function HomeContent() {
                 exit={{ opacity: 0, y: -10 }}
                 className="max-w-xl mx-auto pt-8"
               >
-                {/* Back button */}
-                <div className="mb-6">
+                {/* Header with inline back button */}
+                <div className="flex items-start gap-3 mb-8">
                   <button
                     onClick={handleBackDuringProcessing}
-                    className="icon-btn"
+                    className="icon-btn flex-shrink-0"
                     aria-label="Back to home"
                     title="Go back (processing continues in background)"
                   >
                     <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                   </button>
-                </div>
-
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-semibold mb-2">
-                    Creating Your 3D Scene
-                  </h2>
-                  <p className="text-[var(--text-muted)]">
-                    Analyzing your image and generating a 3D representation...
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-2">
-                    You can go back while this processes
-                  </p>
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      Creating your 3D scene
+                    </h2>
+                    <p className="text-[var(--text-muted)] text-sm">
+                      Analyzing your image and generating a 3D representation...
+                    </p>
+                  </div>
                 </div>
 
                 {/* Preview with pixelated loading effect - always reserve space to prevent layout shift */}
-                <div className="relative w-full max-w-sm mx-auto aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border)] mb-8 bg-[var(--surface)]">
+                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border)] mb-8 bg-[var(--surface)]">
                   {previewUrl ? (
                     <motion.div
                       initial={{ opacity: 0 }}
