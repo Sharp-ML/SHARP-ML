@@ -126,9 +126,16 @@ function HomeContent() {
     name: string;
     previewUrl: string | null;
     startedAt: number;
+    isFollowup?: boolean; // True if this is a followup regeneration
   }
   const [inProgressScene, setInProgressScene] = useState<InProgressScene | null>(null);
   const inProgressAbortRef = useRef<AbortController | null>(null);
+  
+  // Track if user is still watching the processing screen (to prevent auto-open when viewing another scene)
+  const isWatchingProcessingRef = useRef<boolean>(false);
+  
+  // Track the scene ID being viewed to prevent state mixing
+  const viewingSceneIdRef = useRef<string | null>(null);
 
   // Usage tracking state
   const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
@@ -214,6 +221,10 @@ function HomeContent() {
     // Create abort controller for this request
     const abortController = new AbortController();
     inProgressAbortRef.current = abortController;
+
+    // Mark that user is watching this processing
+    isWatchingProcessingRef.current = true;
+    viewingSceneIdRef.current = null; // Clear any scene being viewed
 
     setAppState("processing");
     setProcessingMode("upload");
@@ -369,9 +380,12 @@ function HomeContent() {
       // Refresh scenes list from server (scene was already created by the API)
       await refreshScenes();
 
-      // Wait a moment before showing the viewer
-      await new Promise((r) => setTimeout(r, 500));
-      setAppState("viewing");
+      // Only transition to viewing if user is still watching this processing
+      // (not if they navigated back home or are viewing another scene)
+      if (isWatchingProcessingRef.current) {
+        await new Promise((r) => setTimeout(r, 500));
+        setAppState("viewing");
+      }
     } catch (err) {
       // Ensure progress timer is cleaned up on error
       if (progressInterval) {
@@ -384,7 +398,10 @@ function HomeContent() {
       console.error("Processing error:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
       setProcessingStage("error");
-      setAppState("error");
+      // Only show error state if user is still watching
+      if (isWatchingProcessingRef.current) {
+        setAppState("error");
+      }
       // Clear in-progress scene on error
       setInProgressScene(null);
       inProgressAbortRef.current = null;
@@ -404,6 +421,10 @@ function HomeContent() {
     const abortController = new AbortController();
     inProgressAbortRef.current = abortController;
 
+    // Mark that user is watching this processing
+    isWatchingProcessingRef.current = true;
+    viewingSceneIdRef.current = null; // Clear any scene being viewed
+
     setAppState("processing");
     setProcessingMode("prompt");
     setProcessingStage("uploading");
@@ -419,6 +440,14 @@ function HomeContent() {
 
     // Create in-progress scene ID
     const inProgressId = `in-progress-${Date.now()}`;
+
+    // Set in-progress scene immediately (before API call) so it shows in home if user navigates away
+    setInProgressScene({
+      id: inProgressId,
+      name: sceneName,
+      previewUrl: null, // Will be updated once image is generated
+      startedAt: Date.now(),
+    });
 
     try {
       // Step 1: Generate image from prompt
@@ -555,8 +584,12 @@ function HomeContent() {
       inProgressAbortRef.current = null;
 
       await refreshScenes();
-      await new Promise((r) => setTimeout(r, 500));
-      setAppState("viewing");
+      
+      // Only transition to viewing if user is still watching this processing
+      if (isWatchingProcessingRef.current) {
+        await new Promise((r) => setTimeout(r, 500));
+        setAppState("viewing");
+      }
     } catch (err) {
       // Don't treat abort as an error
       if (err instanceof Error && err.name === "AbortError") {
@@ -565,7 +598,10 @@ function HomeContent() {
       console.error("Prompt processing error:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
       setProcessingStage("error");
-      setAppState("error");
+      // Only show error state if user is still watching
+      if (isWatchingProcessingRef.current) {
+        setAppState("error");
+      }
       // Clear in-progress scene on error
       setInProgressScene(null);
       inProgressAbortRef.current = null;
@@ -587,9 +623,23 @@ function HomeContent() {
     }
 
     const sourceImageUrl = imageUrl || previewUrl;
+    const sceneName = followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
+    const inProgressId = `followup-${Date.now()}`;
+
+    // Mark that user is watching this regeneration (can navigate away)
+    isWatchingProcessingRef.current = true;
 
     setIsRegenerating(true);
     setError(null);
+
+    // Set in-progress scene for followup so it shows in home if user navigates away
+    setInProgressScene({
+      id: inProgressId,
+      name: sceneName,
+      previewUrl: sourceImageUrl,
+      startedAt: Date.now(),
+      isFollowup: true,
+    });
 
     try {
       // Step 1: Edit the existing image using the follow-up prompt
@@ -612,10 +662,18 @@ function HomeContent() {
       // Update preview with edited image
       setPreviewUrl(editData.imageUrl);
 
+      // Update in-progress scene with the new preview
+      setInProgressScene({
+        id: inProgressId,
+        name: sceneName,
+        previewUrl: editData.imageUrl,
+        startedAt: Date.now(),
+        isFollowup: true,
+      });
+
       // Step 2: Convert edited image to File and process to 3D
       const imageResponse = await fetch(editData.imageUrl);
       const imageBlob = await imageResponse.blob();
-      const sceneName = followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
       const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
 
       const formData = new FormData();
@@ -651,17 +709,13 @@ function HomeContent() {
         throw new Error(errorMsg);
       }
 
-      // Update the model URL with the new scene
-      setModelUrl(data.modelUrl);
-      setModelType(data.modelType || "glb");
-      setImageUrl(data.imageUrl || null);
-      setCurrentSceneName(sceneName);
+      // Clear in-progress scene
+      setInProgressScene(null);
 
       // Update the original prompt to track the edit history
       const updatedPrompt = originalPrompt 
         ? `${originalPrompt}. Then: ${followup}`
         : followup;
-      setOriginalPrompt(updatedPrompt);
 
       if (data.usage) {
         setUserUsage({
@@ -672,9 +726,23 @@ function HomeContent() {
       }
 
       await refreshScenes();
+
+      // Only update the viewing state if user is still watching
+      if (isWatchingProcessingRef.current) {
+        setModelUrl(data.modelUrl);
+        setModelType(data.modelType || "glb");
+        setImageUrl(data.imageUrl || null);
+        setCurrentSceneName(sceneName);
+        setOriginalPrompt(updatedPrompt);
+      }
     } catch (err) {
       console.error("Followup processing error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
+      // Only show error if user is still watching
+      if (isWatchingProcessingRef.current) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      }
+      // Clear in-progress scene on error
+      setInProgressScene(null);
     } finally {
       setIsRegenerating(false);
     }
@@ -682,6 +750,9 @@ function HomeContent() {
 
   // Navigate back to home during processing (keeps generation running in background)
   const handleBackDuringProcessing = useCallback(() => {
+    // Mark that user is no longer watching this processing
+    isWatchingProcessingRef.current = false;
+    
     // Reset UI state but keep the in-progress scene
     setAppState("upload");
     setProcessingStage("uploading");
@@ -696,7 +767,29 @@ function HomeContent() {
     // The generation continues in the background
   }, []);
 
+  // Navigate back to home during followup regeneration (keeps generation running in background)
+  const handleBackDuringRegeneration = useCallback(() => {
+    // Mark that user is no longer watching this regeneration
+    isWatchingProcessingRef.current = false;
+    
+    // Reset UI state but keep the in-progress scene (for regeneration)
+    setAppState("upload");
+    setPreviewUrl(null);
+    setError(null);
+    setCurrentSceneName(null);
+    setModelUrl(null);
+    setModelType("glb");
+    setImageUrl(null);
+    setOriginalPrompt(null);
+    // Note: We intentionally do NOT clear inProgressScene or isRegenerating here
+    // The regeneration continues in the background
+  }, []);
+
   const handleReset = useCallback(() => {
+    // Clear watching state
+    isWatchingProcessingRef.current = false;
+    viewingSceneIdRef.current = null;
+    
     setAppState("upload");
     setProcessingStage("uploading");
     setProgress(0);
@@ -720,6 +813,10 @@ function HomeContent() {
 
   // Handler for selecting a scene from history
   const handleSelectScene = useCallback((scene: SavedScene) => {
+    // Mark that user is now viewing a specific scene (not watching a processing)
+    isWatchingProcessingRef.current = false;
+    viewingSceneIdRef.current = scene.id;
+    
     setModelUrl(scene.modelUrl);
     setModelType(scene.modelType);
     setPreviewUrl(scene.imageUrl); // Use imageUrl as preview (from Vercel Blob)
@@ -1114,7 +1211,7 @@ function HomeContent() {
                               <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                                 <span className="flex items-center gap-1">
                                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
-                                  Generating...
+                                  {inProgressScene.isFollowup ? "Regenerating..." : "Generating..."}
                                 </span>
                               </div>
                             </div>
@@ -1255,16 +1352,22 @@ function HomeContent() {
                 <div className="mb-6">
                   <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                     <button
-                      onClick={handleReset}
+                      onClick={isRegenerating ? handleBackDuringRegeneration : handleReset}
                       className="icon-btn flex-shrink-0"
                       aria-label="Back to home"
-                      disabled={isRegenerating}
+                      title={isRegenerating ? "Go back (regeneration continues in background)" : "Back to home"}
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
                     <h2 className="text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
+                    {isRegenerating && (
+                      <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] flex-shrink-0">
+                        <div className="w-2 h-2 rounded-full bg-[var(--warning)] animate-pulse" />
+                        <span>Regenerating...</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
