@@ -443,7 +443,7 @@ function HomeContent() {
     // Set in-progress scene immediately (before API call) so it shows in home if user navigates away
     setInProgressScene({
       id: inProgressId,
-      name: sceneName,
+      name: prompt,
       previewUrl: null, // Will be updated once image is generated
       startedAt: Date.now(),
     });
