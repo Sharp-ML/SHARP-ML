@@ -413,9 +413,8 @@ function HomeContent() {
     setIsConfigError(false);
     setSetupInstructions(null);
 
-    // Store the prompt as scene name (truncate if too long)
-    const sceneName = prompt.length > 50 ? prompt.substring(0, 47) + "..." : prompt;
-    setCurrentSceneName(sceneName);
+    // Store the full prompt as scene name (CSS handles truncation)
+    setCurrentSceneName(prompt);
 
     // Create in-progress scene ID
     const inProgressId = `in-progress-${Date.now()}`;
@@ -449,7 +448,7 @@ function HomeContent() {
       // Update in-progress scene with the preview
       setInProgressScene({
         id: inProgressId,
-        name: sceneName,
+        name: prompt,
         previewUrl: generateData.imageUrl,
         startedAt: Date.now(),
       });
@@ -457,7 +456,7 @@ function HomeContent() {
       // Step 2: Convert generated image to File and process to 3D
       const imageResponse = await fetch(generateData.imageUrl);
       const imageBlob = await imageResponse.blob();
-      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
+      const imageFile = new File([imageBlob], `${prompt}.png`, { type: "image/png" });
 
       // Continue with existing 3D processing flow
       setProcessingStage("processing");
@@ -615,8 +614,7 @@ function HomeContent() {
       // Step 2: Convert edited image to File and process to 3D
       const imageResponse = await fetch(editData.imageUrl);
       const imageBlob = await imageResponse.blob();
-      const sceneName = followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
-      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
+      const imageFile = new File([imageBlob], `${followup}.png`, { type: "image/png" });
 
       const formData = new FormData();
       formData.append("image", imageFile);
@@ -655,7 +653,7 @@ function HomeContent() {
       setModelUrl(data.modelUrl);
       setModelType(data.modelType || "glb");
       setImageUrl(data.imageUrl || null);
-      setCurrentSceneName(sceneName);
+      setCurrentSceneName(followup);
 
       // Update the original prompt to track the edit history
       const updatedPrompt = originalPrompt 
@@ -1128,7 +1126,7 @@ function HomeContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: (inProgressScene ? index + 1 : index) * 0.05 }}
                             onClick={() => handleSelectScene(scene)}
-                            className="group flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
+                            className="group relative flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
                             {/* Thumbnail */}
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
@@ -1142,7 +1140,7 @@ function HomeContent() {
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                             </div>
                             {/* Info */}
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-8">
                               <p className="text-sm font-medium truncate">
                                 {scene.name}
                               </p>
@@ -1157,17 +1155,17 @@ function HomeContent() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2">
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeScene(scene.id);
                                 }}
-                                className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 opacity-0 group-hover:opacity-100"
+                                className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                               </button>
-                              <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100" strokeWidth={1.5} />
+                              <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                             </div>
                           </motion.div>
                         ))}
@@ -1253,7 +1251,7 @@ function HomeContent() {
               >
                 {/* Viewer header */}
                 <div className="mb-6">
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 w-full">
                     <button
                       onClick={handleReset}
                       className="icon-btn flex-shrink-0"
@@ -1262,7 +1260,7 @@ function HomeContent() {
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
-                    <h2 className="text-2xl font-semibold truncate">
+                    <h2 className="text-2xl font-semibold truncate flex-1 min-w-0">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
                   </div>
