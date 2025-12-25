@@ -93,7 +93,7 @@ function StageIcon({
     );
   }
 
-  const iconClassName = `text-white ${className}`;
+  const iconClassName = `text-[var(--text-secondary)] ${className}`;
 
   switch (stageId) {
     case "uploading":
@@ -180,10 +180,10 @@ export default function ProcessingStatus({
       <div className="flex items-center gap-4">
         {/* Icon box */}
         <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+          className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors border ${
             isComplete
-              ? "bg-[var(--success)]/10 border border-[var(--success)]/20"
-              : "bg-[var(--foreground)]"
+              ? "bg-[var(--success)]/10 border-[var(--success)]/20"
+              : "bg-transparent border-[var(--border)]"
           }`}
         >
           <StageIcon
@@ -222,7 +222,7 @@ export default function ProcessingStatus({
             </p>
             {timeRemaining !== null && (
               <span className="text-xs text-[var(--text-muted)] tabular-nums flex-shrink-0 ml-2">
-                ~{timeRemaining}s
+                {timeRemaining}s
               </span>
             )}
           </div>

@@ -13,16 +13,12 @@ import {
   Clock,
   Trash2,
   ChevronRight,
-  Sparkles,
   HelpCircle,
   LogOut,
   MessageCircle,
-  Upload,
-  Wand2,
 } from "lucide-react";
 import { ImageIcon } from "@/components/ui/image";
 import Image from "next/image";
-import ImageUpload from "./components/ImageUpload";
 import PromptInput from "./components/PromptInput";
 import FollowupInput from "./components/FollowupInput";
 import GaussianViewer from "./components/GaussianViewer";
@@ -100,7 +96,6 @@ function HomeContent() {
   const { data: session, update: updateSession } = useSession();
   
   const [appState, setAppState] = useState<AppState>("upload");
-  const [activeTab, setActiveTab] = useState<"upload" | "prompt">("prompt");
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
   const [processingMode, setProcessingMode] = useState<"upload" | "prompt">("upload");
@@ -434,9 +429,8 @@ function HomeContent() {
     setIsConfigError(false);
     setSetupInstructions(null);
 
-    // Store the prompt as scene name (truncate if too long)
-    const sceneName = prompt.length > 50 ? prompt.substring(0, 47) + "..." : prompt;
-    setCurrentSceneName(sceneName);
+    // Store the full prompt as scene name (CSS handles truncation)
+    setCurrentSceneName(prompt);
 
     // Create in-progress scene ID
     const inProgressId = `in-progress-${Date.now()}`;
@@ -444,7 +438,7 @@ function HomeContent() {
     // Set in-progress scene immediately (before API call) so it shows in home if user navigates away
     setInProgressScene({
       id: inProgressId,
-      name: sceneName,
+      name: prompt,
       previewUrl: null, // Will be updated once image is generated
       startedAt: Date.now(),
     });
@@ -478,7 +472,7 @@ function HomeContent() {
       // Update in-progress scene with the preview
       setInProgressScene({
         id: inProgressId,
-        name: sceneName,
+        name: prompt,
         previewUrl: generateData.imageUrl,
         startedAt: Date.now(),
       });
@@ -486,7 +480,7 @@ function HomeContent() {
       // Step 2: Convert generated image to File and process to 3D
       const imageResponse = await fetch(generateData.imageUrl);
       const imageBlob = await imageResponse.blob();
-      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
+      const imageFile = new File([imageBlob], `${prompt}.png`, { type: "image/png" });
 
       // Continue with existing 3D processing flow
       setProcessingStage("processing");
@@ -1065,7 +1059,7 @@ function HomeContent() {
                     transition={{ delay: 0.05 }}
                     className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-2"
                   >
-                    <span>2D</span>
+                    <span>Prompt</span>
                     <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                     <span>3D</span>
                   </motion.h1>
@@ -1076,81 +1070,23 @@ function HomeContent() {
                     transition={{ delay: 0.1 }}
                     className="text-base sm:text-lg text-[var(--text-muted)] leading-snug"
                   >
-                    Transform any photo into an interactive 3D scene.
+                    Transform any prompt into an interactive 3D scene.
                   </motion.p>
                 </div>
 
-                {/* Tab Selector */}
+                {/* Prompt Input */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="mb-6"
-                >
-                  <div className="inline-flex p-1 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-                    <button
-                      onClick={() => setActiveTab("prompt")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        activeTab === "prompt"
-                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-                      }`}
-                    >
-                      <Wand2 className="w-4 h-4" strokeWidth={2} />
-                      <span>Prompt</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("upload")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        activeTab === "upload"
-                          ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-                      }`}
-                    >
-                      <Upload className="w-4 h-4" strokeWidth={2} />
-                      <span>Upload</span>
-                    </button>
-                  </div>
-                </motion.div>
-
-                {/* Upload Zone / Prompt Input */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
                   className="mb-10"
                 >
-                  <AnimatePresence mode="wait">
-                    {activeTab === "upload" ? (
-                      <motion.div
-                        key="upload-tab"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ImageUpload 
-                          onImageSelect={handleImageSelect} 
-                          disabled={!canUpload}
-                          onDisabledClick={() => setShowUpgradeModal(true)}
-                        />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="prompt-tab"
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <PromptInput
-                          onSubmit={handlePromptSubmit}
-                          disabled={!canUpload}
-                          onDisabledClick={() => setShowUpgradeModal(true)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <PromptInput
+                    onSubmit={handlePromptSubmit}
+                    onImageSelect={handleImageSelect}
+                    disabled={!canUpload}
+                    onDisabledClick={() => setShowUpgradeModal(true)}
+                  />
                 </motion.div>
 
                 {/* How it works OR Recent Scenes */}
@@ -1225,7 +1161,7 @@ function HomeContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: (inProgressScene ? index + 1 : index) * 0.05 }}
                             onClick={() => handleSelectScene(scene)}
-                            className="group flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
+                            className="group relative flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
                             {/* Thumbnail */}
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-[var(--surface-elevated)] flex-shrink-0">
@@ -1239,7 +1175,7 @@ function HomeContent() {
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                             </div>
                             {/* Info */}
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-16">
                               <p className="text-sm font-medium truncate">
                                 {scene.name}
                               </p>
@@ -1254,17 +1190,17 @@ function HomeContent() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2">
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeScene(scene.id);
                                 }}
-                                className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 opacity-0 group-hover:opacity-100"
+                                className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                               </button>
-                              <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100" strokeWidth={1.5} />
+                              <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                             </div>
                           </motion.div>
                         ))}
@@ -1283,32 +1219,28 @@ function HomeContent() {
                 exit={{ opacity: 0, y: -10 }}
                 className="max-w-xl mx-auto pt-8"
               >
-                {/* Back button */}
-                <div className="mb-6">
+                {/* Header with inline back button */}
+                <div className="flex items-start gap-3 mb-8">
                   <button
                     onClick={handleBackDuringProcessing}
-                    className="icon-btn"
+                    className="icon-btn flex-shrink-0"
                     aria-label="Back to home"
                     title="Go back (processing continues in background)"
                   >
                     <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                   </button>
-                </div>
-
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-semibold mb-2">
-                    Creating Your 3D Scene
-                  </h2>
-                  <p className="text-[var(--text-muted)]">
-                    Analyzing your image and generating a 3D representation...
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-2">
-                    You can go back while this processes
-                  </p>
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      Creating your 3D scene
+                    </h2>
+                    <p className="text-[var(--text-muted)] text-sm">
+                      Analyzing your image and generating a 3D representation...
+                    </p>
+                  </div>
                 </div>
 
                 {/* Preview with pixelated loading effect - always reserve space to prevent layout shift */}
-                <div className="relative w-full max-w-sm mx-auto aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border)] mb-8 bg-[var(--surface)]">
+                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border)] mb-8 bg-[var(--surface)]">
                   {previewUrl ? (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -1350,7 +1282,7 @@ function HomeContent() {
               >
                 {/* Viewer header */}
                 <div className="mb-6">
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 w-full">
                     <button
                       onClick={isRegenerating ? handleBackDuringRegeneration : handleReset}
                       className="icon-btn flex-shrink-0"
@@ -1359,7 +1291,7 @@ function HomeContent() {
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
-                    <h2 className="text-2xl font-semibold truncate">
+                    <h2 className="text-2xl font-semibold truncate flex-1 min-w-0">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
                   </div>
