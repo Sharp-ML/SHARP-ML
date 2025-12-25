@@ -1362,12 +1362,6 @@ function HomeContent() {
                     <h2 className="text-2xl font-semibold truncate">
                       {currentSceneName || "Your 3D Scene"}
                     </h2>
-                    {isRegenerating && (
-                      <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] flex-shrink-0">
-                        <div className="w-2 h-2 rounded-full bg-[var(--warning)] animate-pulse" />
-                        <span>Regenerating...</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
