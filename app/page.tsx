@@ -802,11 +802,11 @@ function HomeContent() {
     setIsConfigError(false);
     setSetupInstructions(null);
     setCurrentSceneName(null);
-    // Clear regeneration state
+    // Clear regeneration state for current view (but NOT in-progress scene - let background task handle it)
     setIsRegenerating(false);
     setOriginalPrompt(null);
-    // Clear in-progress state
-    setInProgressScene(null);
+    // Note: We intentionally do NOT clear inProgressScene here
+    // Background tasks manage their own cleanup when they complete
     // Clear URL parameters
     router.replace("/", { scroll: false });
   }, [router]);
