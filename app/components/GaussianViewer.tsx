@@ -914,10 +914,10 @@ export default function GaussianViewer({
                   <button
                     type="button"
                     onClick={handleCollapse}
-                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer"
                     title="Close"
                   >
-                    <X className="w-5 h-5 text-white" />
+                    <X className="w-4 h-4 text-white" />
                   </button>
                 )}
                 
@@ -930,12 +930,12 @@ export default function GaussianViewer({
                   }}
                   className={`flex items-center justify-center transition-all cursor-pointer ${
                     isExpanded
-                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      ? "w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
                       : "p-2.5 rounded-xl glass hover:bg-white/10"
                   }`}
                   title="Reset view"
                 >
-                  <RotateCcw className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                  <RotateCcw className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"} />
                 </button>
                 
                 {/* Expand button when not expanded */}
@@ -962,12 +962,12 @@ export default function GaussianViewer({
                   }}
                   className={`flex items-center justify-center transition-all cursor-pointer ${
                     isExpanded
-                      ? "w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
+                      ? "w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20"
                       : "p-2.5 rounded-xl glass hover:bg-white/10"
                   }`}
                   title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
                 >
-                  <Download className={isExpanded ? "w-5 h-5 text-white" : "w-4 h-4"} />
+                  <Download className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"} />
                 </button>
               </div>
 
@@ -1034,10 +1034,10 @@ export default function GaussianViewer({
                       viewMode === "scene"
                         ? isExpanded
                           ? "bg-white text-black"
-                          : "bg-[var(--accent)] text-white"
+                          : "bg-[var(--accent)] text-[var(--background)]"
                         : isExpanded
                           ? "text-white/60 hover:text-white hover:bg-white/10"
-                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/5"
                     }`}
                   >
                     <Box className="w-3.5 h-3.5" />
@@ -1050,10 +1050,10 @@ export default function GaussianViewer({
                       viewMode === "video"
                         ? isExpanded
                           ? "bg-white text-black"
-                          : "bg-[var(--accent)] text-white"
+                          : "bg-[var(--accent)] text-[var(--background)]"
                         : isExpanded
                           ? "text-white/60 hover:text-white hover:bg-white/10"
-                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/5"
                     }`}
                   >
                     <Video className="w-3.5 h-3.5" />

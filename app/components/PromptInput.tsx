@@ -268,7 +268,7 @@ export default function PromptInput({
             </AnimatePresence>
 
             {/* Buttons container */}
-            <div className="absolute right-2 bottom-4 flex items-center gap-1.5">
+            <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
               {/* Paperclip button - hidden once an image is attached */}
               {attachedImages.length === 0 && (
                 <button

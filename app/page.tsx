@@ -28,6 +28,7 @@ import { useScenesHistory, SavedScene } from "./hooks/useScenesHistory";
 import { AuthGate } from "./components/AuthGate";
 import { signOut } from "next-auth/react";
 import { UpgradeModal } from "./components/UpgradeModal";
+import { ThemePicker } from "./components/ThemePicker";
 
 // Free tier limit (override with Infinity in local dev for easier testing)
 const FREE_SCENE_LIMIT = process.env.NODE_ENV === "development" ? Infinity : 10;
@@ -1437,13 +1438,14 @@ function HomeContent() {
               </button>
               <AnimatePresence>
                 {showHelpMenu && (
-<motion.div
+                <motion.div
                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    transition={{ duration: 0.1 }}
                    style={{ transformOrigin: "bottom right" }}
                    className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
                  >
+                    <ThemePicker />
                     <a
                       href="https://x.com/messages/compose?recipient_id=1325862778603769856"
                       target="_blank"

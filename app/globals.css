@@ -591,7 +591,96 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.dark .glass {
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Shimmer effect for dark mode */
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Primary button dark mode */
+.dark .btn-primary {
+  background: var(--accent);
+  color: #1a1a1a;
+}
+
+.dark .btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* Theme Picker */
+.theme-picker-wrapper {
+  margin-bottom: 4px;
+}
+
+.theme-picker-list {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  background: var(--surface-elevated);
+  border-radius: 0.5rem;
+}
+
+.theme-picker-list li {
+  display: flex;
+  flex: 1;
+}
+
+.theme-picker-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Only enable transitions after mount to prevent animation while determining active state */
+.theme-picker-ready .theme-picker-button {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.theme-picker-button:hover {
+  color: var(--foreground);
+}
+
+.theme-picker-button-active,
+.theme-picker-button-active:hover {
+  background: var(--foreground);
+  color: var(--background);
+}
+
 .dark {
+  /* Family/ConnectKit-inspired dark theme */
+  --accent: #E5E5E5;
+  --accent-hover: #D4D4D4;
+  --surface: #1A1A1A;
+  --surface-elevated: #262626;
+  --surface-hover: #2D2D2D;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --text-muted: #A3A3A3;
+  --text-secondary: #D4D4D4;
+  --success: #22C55E;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --warm-tint: #1F1F1F;
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -604,10 +693,8 @@ a {
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -633,3 +720,12 @@ a {
     @apply bg-background text-foreground;
   }
 }
+
+/* Disable transitions during theme switch (except theme picker) */
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: none !important;
+}
+
+/* Keep theme picker clip-path animation enabled */
