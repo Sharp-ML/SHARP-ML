@@ -618,21 +618,18 @@ a {
   background: var(--accent-hover);
 }
 
-/* Theme Picker - Clip Path Animation (following Emil Kowalski's technique) */
+/* Theme Picker */
 .theme-picker-wrapper {
-  position: relative;
   margin-bottom: 4px;
 }
 
 .theme-picker-list {
-  position: relative;
   display: flex;
   list-style: none;
   margin: 0;
   padding: 0.25rem;
   background: var(--surface-elevated);
   border-radius: 0.5rem;
-  width: 100%;
 }
 
 .theme-picker-list li {
@@ -651,31 +648,19 @@ a {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s ease;
+}
+
+/* Only enable transitions after mount to prevent animation while determining active state */
+.theme-picker-ready .theme-picker-button {
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .theme-picker-button:hover {
   color: var(--foreground);
 }
 
-.theme-picker-clip-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  clip-path: inset(0 66.7% 0 0% round 6px);
-  transition: clip-path 0.25s cubic-bezier(0.77, 0, 0.175, 1);
-  pointer-events: none;
-}
-
-.theme-picker-list-overlay {
-  background: transparent;
-}
-
-.theme-picker-button-overlay {
+.theme-picker-button-active,
+.theme-picker-button-active:hover {
   background: var(--foreground);
   color: var(--background);
 }
