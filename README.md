@@ -143,7 +143,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - **Scroll wheel** — Zoom in/out
    - **Right-click + drag** — Pan the view
 5. **Share** — Copy the shareable link to share your 3D scene
-6. **Upgrade** — After 3 free scenes, upgrade via Stripe for unlimited access
 
 ## Architecture
 
@@ -155,24 +154,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ├── app/
 │   ├── components/
 │   │   ├── AuthGate.tsx         # Authentication gate
-│   │   ├── UpgradeModal.tsx     # Stripe payment modal
+│   │   ├── UpgradeModal.tsx     # Usage limit modal
 │   │   ├── ImageUpload.tsx      # Drag & drop upload zone
 │   │   ├── GaussianViewer.tsx   # 3D model viewer (PLY Gaussian splats)
 │   │   └── ProcessingStatus.tsx # Progress indicator
 │   ├── api/
 │   │   ├── auth/[...nextauth]/route.ts # NextAuth handler
 │   │   ├── user/route.ts               # User data API
-│   │   ├── stripe/
-│   │   │   ├── checkout/route.ts       # Create checkout session
-│   │   │   └── webhook/route.ts        # Handle Stripe webhooks
 │   │   └── process/route.ts            # Image processing (authenticated)
 │   ├── providers.tsx            # Session provider wrapper
 │   ├── page.tsx                 # Main application page
 │   └── globals.css              # Custom styling
 ├── lib/
 │   ├── auth.ts                  # NextAuth configuration
-│   ├── prisma.ts                # Prisma client
-│   └── stripe.ts                # Stripe client
+│   └── prisma.ts                # Prisma client
 ```
 
 ## Tech Stack

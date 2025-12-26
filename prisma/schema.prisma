@@ -50,10 +50,7 @@ model User {
   // Usage tracking
   sceneCount    Int       @default(0)  // Number of scenes created
   isPaid        Boolean   @default(false) // Has user paid for unlimited access
-  stripeCustomerId String? @unique
-  stripePriceId    String?
-  stripeSubscriptionId String? @unique
-  
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
