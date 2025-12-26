@@ -10,10 +10,18 @@ interface UpgradeModalProps {
   limit: number;
 }
 
-export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModalProps) {
+export function UpgradeModal({
+  isOpen,
+  onClose,
+  sceneCount,
+  limit,
+}: UpgradeModalProps) {
   const handleContactSupport = () => {
     // Opens a DM compose window on X/Twitter
-    window.open("https://x.com/messages/compose?recipient_id=1325862778603769856", "_blank");
+    window.open(
+      "https://x.com/messages/compose?recipient_id=1325862778603769856",
+      "_blank",
+    );
   };
 
   return (
@@ -40,7 +48,9 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-4 pb-1">
-                <h2 className="text-lg font-semibold text-gray-900">Limit Reached</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Limit Reached
+                </h2>
                 <button
                   onClick={onClose}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
@@ -53,7 +63,8 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
               <div className="px-5 pb-5">
                 {/* Message */}
                 <p className="text-gray-600 text-sm mt-2 mb-4">
-                  You&apos;ve reached your limit of {limit} scenes. Want more? Reach out and let us know!
+                  You&apos;ve reached your limit of {limit} scenes. Want more?
+                  Reach out and let us know!
                 </p>
 
                 {/* Usage info */}
@@ -67,7 +78,9 @@ export function UpgradeModal({ isOpen, onClose, sceneCount, limit }: UpgradeModa
                   <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#2196F3] rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (sceneCount / limit) * 100)}%` }}
+                      style={{
+                        width: `${Math.min(100, (sceneCount / limit) * 100)}%`,
+                      }}
                     />
                   </div>
                 </div>

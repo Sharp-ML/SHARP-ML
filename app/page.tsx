@@ -57,7 +57,8 @@ interface UserUsage {
 }
 
 function formatRelativeTime(dateInput: string | number): string {
-  const timestamp = typeof dateInput === "string" ? new Date(dateInput).getTime() : dateInput;
+  const timestamp =
+    typeof dateInput === "string" ? new Date(dateInput).getTime() : dateInput;
   const now = Date.now();
   const diff = now - timestamp;
   const minutes = Math.floor(diff / 60000);
@@ -95,13 +96,17 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, update: updateSession } = useSession();
-  
+
   const [appState, setAppState] = useState<AppState>("upload");
   const [processingStage, setProcessingStage] =
     useState<ProcessingStage>("uploading");
-  const [processingMode, setProcessingMode] = useState<"upload" | "prompt">("upload");
+  const [processingMode, setProcessingMode] = useState<"upload" | "prompt">(
+    "upload",
+  );
   const [progress, setProgress] = useState(0);
-  const [stageProgress, setStageProgress] = useState<number | undefined>(undefined);
+  const [stageProgress, setStageProgress] = useState<number | undefined>(
+    undefined,
+  );
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [modelType, setModelType] = useState<ModelType>("glb");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -111,7 +116,7 @@ function HomeContent() {
   const [setupInstructions, setSetupInstructions] =
     useState<SetupInstructions | null>(null);
   const [currentSceneName, setCurrentSceneName] = useState<string | null>(null);
-  
+
   // Regeneration state for follow-up prompts
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [originalPrompt, setOriginalPrompt] = useState<string | null>(null);
@@ -124,12 +129,13 @@ function HomeContent() {
     startedAt: number;
     isFollowup?: boolean; // True if this is a followup regeneration
   }
-  const [inProgressScene, setInProgressScene] = useState<InProgressScene | null>(null);
+  const [inProgressScene, setInProgressScene] =
+    useState<InProgressScene | null>(null);
   const inProgressAbortRef = useRef<AbortController | null>(null);
-  
+
   // Track if user is still watching the processing screen (to prevent auto-open when viewing another scene)
   const isWatchingProcessingRef = useRef<boolean>(false);
-  
+
   // Track the scene ID being viewed to prevent state mixing
   const viewingSceneIdRef = useRef<string | null>(null);
 
@@ -142,7 +148,10 @@ function HomeContent() {
   // Close help menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+      if (
+        helpMenuRef.current &&
+        !helpMenuRef.current.contains(event.target as Node)
+      ) {
         setShowHelpMenu(false);
       }
     }
@@ -167,7 +176,7 @@ function HomeContent() {
   useEffect(() => {
     async function fetchUsage() {
       if (!session?.user) return;
-      
+
       try {
         const response = await fetch("/api/user");
         if (response.ok) {
@@ -182,7 +191,7 @@ function HomeContent() {
         console.error("Failed to fetch user usage:", error);
       }
     }
-    
+
     fetchUsage();
   }, [session]);
 
@@ -192,7 +201,9 @@ function HomeContent() {
     if (payment === "success") {
       // Refresh session and usage data
       updateSession();
-      setUserUsage(prev => prev ? { ...prev, isPaid: true, remainingUploads: null } : null);
+      setUserUsage((prev) =>
+        prev ? { ...prev, isPaid: true, remainingUploads: null } : null,
+      );
       // Clean up URL
       router.replace("/", { scroll: false });
     } else if (payment === "cancelled") {
@@ -205,549 +216,574 @@ function HomeContent() {
   // Users can only access their own scenes stored in localStorage.
 
   // Check if user can upload
-  const canUpload = userUsage?.isPaid || (userUsage?.remainingUploads ?? FREE_SCENE_LIMIT) > 0;
+  const canUpload =
+    userUsage?.isPaid || (userUsage?.remainingUploads ?? FREE_SCENE_LIMIT) > 0;
 
-  const handleImageSelect = useCallback(async (file: File) => {
-    // Check if user can upload before proceeding
-    if (!canUpload) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
-    // Create abort controller for this request
-    const abortController = new AbortController();
-    inProgressAbortRef.current = abortController;
-
-    // Mark that user is watching this processing
-    isWatchingProcessingRef.current = true;
-    viewingSceneIdRef.current = null; // Clear any scene being viewed
-
-    setAppState("processing");
-    setProcessingMode("upload");
-    setProcessingStage("uploading");
-    setProgress(0);
-    setStageProgress(undefined);
-    setError(null);
-    setIsConfigError(false);
-    setSetupInstructions(null);
-
-    // Create preview URL
-    const preview = URL.createObjectURL(file);
-    setPreviewUrl(preview);
-
-    // Store the file name for later
-    const fileName = file.name.replace(/\.[^/.]+$/, "") || "Scene";
-    setCurrentSceneName(fileName);
-
-    // Create in-progress scene ID
-    const inProgressId = `in-progress-${Date.now()}`;
-
-    // Set in-progress scene with preview
-    setInProgressScene({
-      id: inProgressId,
-      name: fileName,
-      previewUrl: preview,
-      startedAt: Date.now(),
-    });
-
-    // Progress interval reference for cleanup
-    let progressInterval: NodeJS.Timeout | null = null;
-
-    try {
-      // Initial upload progress
-      setProgress(10);
-
-      setProcessingStage("processing");
-      setStageProgress(0);
-
-      // Upload the file
-      const formData = new FormData();
-      formData.append("image", file);
-
-      setProgress(20);
-
-      // Start progress estimation timer for the processing stage
-      // The Sharp model typically takes 30-90 seconds
-      const estimatedDuration = 60000; // 60 seconds expected
-      const startTime = Date.now();
-      progressInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        // Use an easing curve that slows down as it approaches 95%
-        // This creates a more realistic "waiting" feel
-        const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
-        // Apply easing: faster at start, slower as it approaches completion
-        const easedProgress = rawProgress < 50 
-          ? rawProgress 
-          : 50 + (rawProgress - 50) * 0.5;
-        setStageProgress(Math.min(95, easedProgress));
-      }, 500);
-
-      const response = await fetch("/api/process", {
-        method: "POST",
-        body: formData,
-        signal: abortController.signal,
-      });
-
-      // Clear the progress timer
-      clearInterval(progressInterval);
-      progressInterval = null;
-      setStageProgress(100);
-
-      setProgress(30);
-
-      // Handle 413 error specifically (file too large)
-      if (response.status === 413) {
-        throw new Error("File too large. Please use an image under 4.5MB.");
-      }
-
-      // Handle 401 (unauthorized)
-      if (response.status === 401) {
-        throw new Error("Please sign in to continue.");
-      }
-
-      // Handle 402 (payment required)
-      if (response.status === 402) {
+  const handleImageSelect = useCallback(
+    async (file: File) => {
+      // Check if user can upload before proceeding
+      if (!canUpload) {
         setShowUpgradeModal(true);
-        throw new Error("You've reached your free limit. Upgrade to continue.");
-      }
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        // If JSON parsing fails, it might be an error response
-        throw new Error("Server error. Please try again with a smaller image.");
-      }
-
-      if (!response.ok) {
-        // Check if it's a configuration error
-        if (data.setup) {
-          setIsConfigError(true);
-          setSetupInstructions(data.setup);
-          throw new Error(data.message || "Server configuration error");
-        }
-        // Check if payment is required
-        if (data.requiresPayment) {
-          setShowUpgradeModal(true);
-        }
-        // Include details in error message if available
-        const errorMsg = data.details 
-          ? `${data.error}: ${data.details}` 
-          : data.error || "Processing failed";
-        throw new Error(errorMsg);
-      }
-
-      // Clear stage progress as we move to the next stage
-      setStageProgress(undefined);
-
-      // Show progress during processing (the API waits for completion)
-      for (let i = 30; i <= 90; i += 10) {
-        await new Promise((r) => setTimeout(r, 200));
-        setProgress(i);
-      }
-
-      setProcessingStage("generating");
-      setProgress(95);
-
-      setProcessingStage("complete");
-      setProgress(100);
-
-      // Set the model URL and type from response
-      const newModelUrl = data.modelUrl;
-      const newModelType = data.modelType || "glb";
-      const newImageUrl = data.imageUrl || null;
-      setModelUrl(newModelUrl);
-      setModelType(newModelType);
-      setImageUrl(newImageUrl);
-
-      // Update usage from response
-      if (data.usage) {
-        setUserUsage({
-          sceneCount: data.usage.sceneCount,
-          isPaid: data.usage.isPaid,
-          remainingUploads: data.usage.remainingUploads,
-        });
-      }
-
-      // Clear in-progress scene
-      setInProgressScene(null);
-      inProgressAbortRef.current = null;
-
-      // Refresh scenes list from server (scene was already created by the API)
-      await refreshScenes();
-
-      // Only transition to viewing if user is still watching this processing
-      // (not if they navigated back home or are viewing another scene)
-      if (isWatchingProcessingRef.current) {
-        await new Promise((r) => setTimeout(r, 500));
-        setAppState("viewing");
-      }
-    } catch (err) {
-      // Ensure progress timer is cleaned up on error
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-      // Don't treat abort as an error
-      if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      console.error("Processing error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setProcessingStage("error");
-      // Only show error state if user is still watching
-      if (isWatchingProcessingRef.current) {
-        setAppState("error");
-      }
-      // Clear in-progress scene on error
-      setInProgressScene(null);
-      inProgressAbortRef.current = null;
-    }
-  }, [refreshScenes, canUpload]);
 
-  // Handle prompt submission - generates image then converts to 3D
-  // Supports background processing when user navigates away
-  const handlePromptSubmit = useCallback(async (prompt: string) => {
-    // Check if user can upload before proceeding
-    if (!canUpload) {
-      setShowUpgradeModal(true);
-      return;
-    }
+      // Create abort controller for this request
+      const abortController = new AbortController();
+      inProgressAbortRef.current = abortController;
 
-    // Create abort controller for this request
-    const abortController = new AbortController();
-    inProgressAbortRef.current = abortController;
+      // Mark that user is watching this processing
+      isWatchingProcessingRef.current = true;
+      viewingSceneIdRef.current = null; // Clear any scene being viewed
 
-    // Mark that user is watching this processing
-    isWatchingProcessingRef.current = true;
-    viewingSceneIdRef.current = null; // Clear any scene being viewed
+      setAppState("processing");
+      setProcessingMode("upload");
+      setProcessingStage("uploading");
+      setProgress(0);
+      setStageProgress(undefined);
+      setError(null);
+      setIsConfigError(false);
+      setSetupInstructions(null);
 
-    setAppState("processing");
-    setProcessingMode("prompt");
-    setProcessingStage("uploading");
-    setProgress(0);
-    setStageProgress(undefined);
-    setError(null);
-    setIsConfigError(false);
-    setSetupInstructions(null);
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      setPreviewUrl(preview);
 
-    // Store the full prompt as scene name (CSS handles truncation)
-    setCurrentSceneName(prompt);
+      // Store the file name for later
+      const fileName = file.name.replace(/\.[^/.]+$/, "") || "Scene";
+      setCurrentSceneName(fileName);
 
-    // Create in-progress scene ID
-    const inProgressId = `in-progress-${Date.now()}`;
+      // Create in-progress scene ID
+      const inProgressId = `in-progress-${Date.now()}`;
 
-    // Set in-progress scene immediately (before API call) so it shows in home if user navigates away
-    setInProgressScene({
-      id: inProgressId,
-      name: prompt,
-      previewUrl: null, // Will be updated once image is generated
-      startedAt: Date.now(),
-    });
-
-    try {
-      // Step 1: Generate image from prompt
-      setProgress(5);
-      
-      const generateResponse = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-        signal: abortController.signal,
-      });
-
-      if (!generateResponse.ok) {
-        const data = await generateResponse.json();
-        if (data.setup) {
-          setIsConfigError(true);
-          setSetupInstructions(data.setup);
-        }
-        throw new Error(data.error || "Failed to generate image");
-      }
-
-      const generateData = await generateResponse.json();
-      setProgress(10);
-
-      // Set preview from generated image
-      setPreviewUrl(generateData.imageUrl);
-
-      // Update in-progress scene with the preview
+      // Set in-progress scene with preview
       setInProgressScene({
         id: inProgressId,
-        name: prompt,
-        previewUrl: generateData.imageUrl,
+        name: fileName,
+        previewUrl: preview,
         startedAt: Date.now(),
       });
 
-      // Step 2: Convert generated image to File and process to 3D
-      const imageResponse = await fetch(generateData.imageUrl);
-      const imageBlob = await imageResponse.blob();
-      const imageFile = new File([imageBlob], `${prompt}.png`, { type: "image/png" });
+      // Progress interval reference for cleanup
+      let progressInterval: NodeJS.Timeout | null = null;
 
-      // Continue with existing 3D processing flow
-      setProcessingStage("processing");
-      setStageProgress(0);
-
-      const formData = new FormData();
-      formData.append("image", imageFile);
-
-      setProgress(20);
-
-      // Start progress estimation timer
-      const estimatedDuration = 60000;
-      const startTime = Date.now();
-      const progressInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
-        const easedProgress = rawProgress < 50 
-          ? rawProgress 
-          : 50 + (rawProgress - 50) * 0.5;
-        setStageProgress(Math.min(95, easedProgress));
-      }, 500);
-
-      const response = await fetch("/api/process", {
-        method: "POST",
-        body: formData,
-        signal: abortController.signal,
-      });
-
-      clearInterval(progressInterval);
-      setStageProgress(100);
-      setProgress(30);
-
-      if (response.status === 413) {
-        throw new Error("Generated image too large. Please try a different prompt.");
-      }
-      if (response.status === 401) {
-        throw new Error("Please sign in to continue.");
-      }
-      if (response.status === 402) {
-        setShowUpgradeModal(true);
-        throw new Error("You've reached your free limit. Upgrade to continue.");
-      }
-
-      let data;
       try {
-        data = await response.json();
-      } catch {
-        throw new Error("Server error. Please try again.");
-      }
+        // Initial upload progress
+        setProgress(10);
 
-      if (!response.ok) {
-        if (data.setup) {
-          setIsConfigError(true);
-          setSetupInstructions(data.setup);
-          throw new Error(data.message || "Server configuration error");
-        }
-        if (data.requiresPayment) {
-          setShowUpgradeModal(true);
-        }
-        const errorMsg = data.details 
-          ? `${data.error}: ${data.details}` 
-          : data.error || "Processing failed";
-        throw new Error(errorMsg);
-      }
+        setProcessingStage("processing");
+        setStageProgress(0);
 
-      setStageProgress(undefined);
+        // Upload the file
+        const formData = new FormData();
+        formData.append("image", file);
 
-      for (let i = 30; i <= 90; i += 10) {
-        await new Promise((r) => setTimeout(r, 200));
-        setProgress(i);
-      }
+        setProgress(20);
 
-      setProcessingStage("generating");
-      setProgress(95);
-      setProcessingStage("complete");
-      setProgress(100);
+        // Start progress estimation timer for the processing stage
+        // The Sharp model typically takes 30-90 seconds
+        const estimatedDuration = 60000; // 60 seconds expected
+        const startTime = Date.now();
+        progressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          // Use an easing curve that slows down as it approaches 95%
+          // This creates a more realistic "waiting" feel
+          const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
+          // Apply easing: faster at start, slower as it approaches completion
+          const easedProgress =
+            rawProgress < 50 ? rawProgress : 50 + (rawProgress - 50) * 0.5;
+          setStageProgress(Math.min(95, easedProgress));
+        }, 500);
 
-      setModelUrl(data.modelUrl);
-      setModelType(data.modelType || "glb");
-      setImageUrl(data.imageUrl || null);
-
-      if (data.usage) {
-        setUserUsage({
-          sceneCount: data.usage.sceneCount,
-          isPaid: data.usage.isPaid,
-          remainingUploads: data.usage.remainingUploads,
+        const response = await fetch("/api/process", {
+          method: "POST",
+          body: formData,
+          signal: abortController.signal,
         });
+
+        // Clear the progress timer
+        clearInterval(progressInterval);
+        progressInterval = null;
+        setStageProgress(100);
+
+        setProgress(30);
+
+        // Handle 413 error specifically (file too large)
+        if (response.status === 413) {
+          throw new Error("File too large. Please use an image under 4.5MB.");
+        }
+
+        // Handle 401 (unauthorized)
+        if (response.status === 401) {
+          throw new Error("Please sign in to continue.");
+        }
+
+        // Handle 402 (payment required)
+        if (response.status === 402) {
+          setShowUpgradeModal(true);
+          throw new Error(
+            "You've reached your free limit. Upgrade to continue.",
+          );
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          // If JSON parsing fails, it might be an error response
+          throw new Error(
+            "Server error. Please try again with a smaller image.",
+          );
+        }
+
+        if (!response.ok) {
+          // Check if it's a configuration error
+          if (data.setup) {
+            setIsConfigError(true);
+            setSetupInstructions(data.setup);
+            throw new Error(data.message || "Server configuration error");
+          }
+          // Check if payment is required
+          if (data.requiresPayment) {
+            setShowUpgradeModal(true);
+          }
+          // Include details in error message if available
+          const errorMsg = data.details
+            ? `${data.error}: ${data.details}`
+            : data.error || "Processing failed";
+          throw new Error(errorMsg);
+        }
+
+        // Clear stage progress as we move to the next stage
+        setStageProgress(undefined);
+
+        // Show progress during processing (the API waits for completion)
+        for (let i = 30; i <= 90; i += 10) {
+          await new Promise((r) => setTimeout(r, 200));
+          setProgress(i);
+        }
+
+        setProcessingStage("generating");
+        setProgress(95);
+
+        setProcessingStage("complete");
+        setProgress(100);
+
+        // Set the model URL and type from response
+        const newModelUrl = data.modelUrl;
+        const newModelType = data.modelType || "glb";
+        const newImageUrl = data.imageUrl || null;
+        setModelUrl(newModelUrl);
+        setModelType(newModelType);
+        setImageUrl(newImageUrl);
+
+        // Update usage from response
+        if (data.usage) {
+          setUserUsage({
+            sceneCount: data.usage.sceneCount,
+            isPaid: data.usage.isPaid,
+            remainingUploads: data.usage.remainingUploads,
+          });
+        }
+
+        // Clear in-progress scene
+        setInProgressScene(null);
+        inProgressAbortRef.current = null;
+
+        // Refresh scenes list from server (scene was already created by the API)
+        await refreshScenes();
+
+        // Only transition to viewing if user is still watching this processing
+        // (not if they navigated back home or are viewing another scene)
+        if (isWatchingProcessingRef.current) {
+          await new Promise((r) => setTimeout(r, 500));
+          setAppState("viewing");
+        }
+      } catch (err) {
+        // Ensure progress timer is cleaned up on error
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
+        // Don't treat abort as an error
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        console.error("Processing error:", err);
+        setError(err instanceof Error ? err.message : "An error occurred");
+        setProcessingStage("error");
+        // Only show error state if user is still watching
+        if (isWatchingProcessingRef.current) {
+          setAppState("error");
+        }
+        // Clear in-progress scene on error
+        setInProgressScene(null);
+        inProgressAbortRef.current = null;
       }
+    },
+    [refreshScenes, canUpload],
+  );
 
-      // Store the original prompt for follow-up regeneration
-      setOriginalPrompt(prompt);
-
-      // Clear in-progress scene
-      setInProgressScene(null);
-      inProgressAbortRef.current = null;
-
-      await refreshScenes();
-      
-      // Only transition to viewing if user is still watching this processing
-      if (isWatchingProcessingRef.current) {
-        await new Promise((r) => setTimeout(r, 500));
-        setAppState("viewing");
-      }
-    } catch (err) {
-      // Don't treat abort as an error
-      if (err instanceof Error && err.name === "AbortError") {
+  // Handle prompt submission - generates image then converts to 3D
+  // Supports background processing when user navigates away
+  const handlePromptSubmit = useCallback(
+    async (prompt: string) => {
+      // Check if user can upload before proceeding
+      if (!canUpload) {
+        setShowUpgradeModal(true);
         return;
       }
-      console.error("Prompt processing error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setProcessingStage("error");
-      // Only show error state if user is still watching
-      if (isWatchingProcessingRef.current) {
-        setAppState("error");
-      }
-      // Clear in-progress scene on error
-      setInProgressScene(null);
-      inProgressAbortRef.current = null;
-    }
-  }, [refreshScenes, canUpload]);
 
-  // Handle follow-up prompt submission - edits existing image and regenerates 3D scene
-  const handleFollowupSubmit = useCallback(async (followup: string) => {
-    // Check if user can upload before proceeding
-    if (!canUpload) {
-      setShowUpgradeModal(true);
-      return;
-    }
+      // Create abort controller for this request
+      const abortController = new AbortController();
+      inProgressAbortRef.current = abortController;
 
-    // Need an existing image to edit
-    if (!imageUrl && !previewUrl) {
-      setError("No existing image to edit. Please create a scene first.");
-      return;
-    }
+      // Mark that user is watching this processing
+      isWatchingProcessingRef.current = true;
+      viewingSceneIdRef.current = null; // Clear any scene being viewed
 
-    const sourceImageUrl = imageUrl || previewUrl;
-    const sceneName = followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
-    const inProgressId = `followup-${Date.now()}`;
+      setAppState("processing");
+      setProcessingMode("prompt");
+      setProcessingStage("uploading");
+      setProgress(0);
+      setStageProgress(undefined);
+      setError(null);
+      setIsConfigError(false);
+      setSetupInstructions(null);
 
-    // Mark that user is watching this regeneration (can navigate away)
-    isWatchingProcessingRef.current = true;
+      // Store the full prompt as scene name (CSS handles truncation)
+      setCurrentSceneName(prompt);
 
-    setIsRegenerating(true);
-    setError(null);
+      // Create in-progress scene ID
+      const inProgressId = `in-progress-${Date.now()}`;
 
-    // Set in-progress scene for followup so it shows in home if user navigates away
-    setInProgressScene({
-      id: inProgressId,
-      name: sceneName,
-      previewUrl: sourceImageUrl,
-      startedAt: Date.now(),
-      isFollowup: true,
-    });
-
-    try {
-      // Step 1: Edit the existing image using the follow-up prompt
-      const editResponse = await fetch("/api/edit-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          imageUrl: sourceImageUrl,
-          editPrompt: followup 
-        }),
+      // Set in-progress scene immediately (before API call) so it shows in home if user navigates away
+      setInProgressScene({
+        id: inProgressId,
+        name: prompt,
+        previewUrl: null, // Will be updated once image is generated
+        startedAt: Date.now(),
       });
 
-      if (!editResponse.ok) {
-        const data = await editResponse.json();
-        throw new Error(data.error || data.message || "Failed to edit image");
+      try {
+        // Step 1: Generate image from prompt
+        setProgress(5);
+
+        const generateResponse = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+          signal: abortController.signal,
+        });
+
+        if (!generateResponse.ok) {
+          const data = await generateResponse.json();
+          if (data.setup) {
+            setIsConfigError(true);
+            setSetupInstructions(data.setup);
+          }
+          throw new Error(data.error || "Failed to generate image");
+        }
+
+        const generateData = await generateResponse.json();
+        setProgress(10);
+
+        // Set preview from generated image
+        setPreviewUrl(generateData.imageUrl);
+
+        // Update in-progress scene with the preview
+        setInProgressScene({
+          id: inProgressId,
+          name: prompt,
+          previewUrl: generateData.imageUrl,
+          startedAt: Date.now(),
+        });
+
+        // Step 2: Convert generated image to File and process to 3D
+        const imageResponse = await fetch(generateData.imageUrl);
+        const imageBlob = await imageResponse.blob();
+        const imageFile = new File([imageBlob], `${prompt}.png`, {
+          type: "image/png",
+        });
+
+        // Continue with existing 3D processing flow
+        setProcessingStage("processing");
+        setStageProgress(0);
+
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        setProgress(20);
+
+        // Start progress estimation timer
+        const estimatedDuration = 60000;
+        const startTime = Date.now();
+        const progressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const rawProgress = Math.min(95, (elapsed / estimatedDuration) * 100);
+          const easedProgress =
+            rawProgress < 50 ? rawProgress : 50 + (rawProgress - 50) * 0.5;
+          setStageProgress(Math.min(95, easedProgress));
+        }, 500);
+
+        const response = await fetch("/api/process", {
+          method: "POST",
+          body: formData,
+          signal: abortController.signal,
+        });
+
+        clearInterval(progressInterval);
+        setStageProgress(100);
+        setProgress(30);
+
+        if (response.status === 413) {
+          throw new Error(
+            "Generated image too large. Please try a different prompt.",
+          );
+        }
+        if (response.status === 401) {
+          throw new Error("Please sign in to continue.");
+        }
+        if (response.status === 402) {
+          setShowUpgradeModal(true);
+          throw new Error(
+            "You've reached your free limit. Upgrade to continue.",
+          );
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("Server error. Please try again.");
+        }
+
+        if (!response.ok) {
+          if (data.setup) {
+            setIsConfigError(true);
+            setSetupInstructions(data.setup);
+            throw new Error(data.message || "Server configuration error");
+          }
+          if (data.requiresPayment) {
+            setShowUpgradeModal(true);
+          }
+          const errorMsg = data.details
+            ? `${data.error}: ${data.details}`
+            : data.error || "Processing failed";
+          throw new Error(errorMsg);
+        }
+
+        setStageProgress(undefined);
+
+        for (let i = 30; i <= 90; i += 10) {
+          await new Promise((r) => setTimeout(r, 200));
+          setProgress(i);
+        }
+
+        setProcessingStage("generating");
+        setProgress(95);
+        setProcessingStage("complete");
+        setProgress(100);
+
+        setModelUrl(data.modelUrl);
+        setModelType(data.modelType || "glb");
+        setImageUrl(data.imageUrl || null);
+
+        if (data.usage) {
+          setUserUsage({
+            sceneCount: data.usage.sceneCount,
+            isPaid: data.usage.isPaid,
+            remainingUploads: data.usage.remainingUploads,
+          });
+        }
+
+        // Store the original prompt for follow-up regeneration
+        setOriginalPrompt(prompt);
+
+        // Clear in-progress scene
+        setInProgressScene(null);
+        inProgressAbortRef.current = null;
+
+        await refreshScenes();
+
+        // Only transition to viewing if user is still watching this processing
+        if (isWatchingProcessingRef.current) {
+          await new Promise((r) => setTimeout(r, 500));
+          setAppState("viewing");
+        }
+      } catch (err) {
+        // Don't treat abort as an error
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        console.error("Prompt processing error:", err);
+        setError(err instanceof Error ? err.message : "An error occurred");
+        setProcessingStage("error");
+        // Only show error state if user is still watching
+        if (isWatchingProcessingRef.current) {
+          setAppState("error");
+        }
+        // Clear in-progress scene on error
+        setInProgressScene(null);
+        inProgressAbortRef.current = null;
+      }
+    },
+    [refreshScenes, canUpload],
+  );
+
+  // Handle follow-up prompt submission - edits existing image and regenerates 3D scene
+  const handleFollowupSubmit = useCallback(
+    async (followup: string) => {
+      // Check if user can upload before proceeding
+      if (!canUpload) {
+        setShowUpgradeModal(true);
+        return;
       }
 
-      const editData = await editResponse.json();
+      // Need an existing image to edit
+      if (!imageUrl && !previewUrl) {
+        setError("No existing image to edit. Please create a scene first.");
+        return;
+      }
 
-      // Update preview with edited image
-      setPreviewUrl(editData.imageUrl);
+      const sourceImageUrl = imageUrl || previewUrl;
+      const sceneName =
+        followup.length > 50 ? followup.substring(0, 47) + "..." : followup;
+      const inProgressId = `followup-${Date.now()}`;
 
-      // Update in-progress scene with the new preview
+      // Mark that user is watching this regeneration (can navigate away)
+      isWatchingProcessingRef.current = true;
+
+      setIsRegenerating(true);
+      setError(null);
+
+      // Set in-progress scene for followup so it shows in home if user navigates away
       setInProgressScene({
         id: inProgressId,
         name: sceneName,
-        previewUrl: editData.imageUrl,
+        previewUrl: sourceImageUrl,
         startedAt: Date.now(),
         isFollowup: true,
       });
 
-      // Step 2: Convert edited image to File and process to 3D
-      const imageResponse = await fetch(editData.imageUrl);
-      const imageBlob = await imageResponse.blob();
-      const imageFile = new File([imageBlob], `${sceneName}.png`, { type: "image/png" });
-
-      const formData = new FormData();
-      formData.append("image", imageFile);
-
-      const response = await fetch("/api/process", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.status === 413) {
-        throw new Error("Edited image too large. Please try a different prompt.");
-      }
-      if (response.status === 401) {
-        throw new Error("Please sign in to continue.");
-      }
-      if (response.status === 402) {
-        setShowUpgradeModal(true);
-        throw new Error("You've reached your free limit. Upgrade to continue.");
-      }
-
-      let data;
       try {
-        data = await response.json();
-      } catch {
-        throw new Error("Server error. Please try again.");
-      }
-
-      if (!response.ok) {
-        const errorMsg = data.details 
-          ? `${data.error}: ${data.details}` 
-          : data.error || "Processing failed";
-        throw new Error(errorMsg);
-      }
-
-      // Clear in-progress scene
-      setInProgressScene(null);
-
-      // Update the original prompt to track the edit history
-      const updatedPrompt = originalPrompt 
-        ? `${originalPrompt}. Then: ${followup}`
-        : followup;
-
-      if (data.usage) {
-        setUserUsage({
-          sceneCount: data.usage.sceneCount,
-          isPaid: data.usage.isPaid,
-          remainingUploads: data.usage.remainingUploads,
+        // Step 1: Edit the existing image using the follow-up prompt
+        const editResponse = await fetch("/api/edit-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageUrl: sourceImageUrl,
+            editPrompt: followup,
+          }),
         });
-      }
 
-      await refreshScenes();
+        if (!editResponse.ok) {
+          const data = await editResponse.json();
+          throw new Error(data.error || data.message || "Failed to edit image");
+        }
 
-      // Only update the viewing state if user is still watching
-      if (isWatchingProcessingRef.current) {
-        setModelUrl(data.modelUrl);
-        setModelType(data.modelType || "glb");
-        setImageUrl(data.imageUrl || null);
-        setCurrentSceneName(sceneName);
-        setOriginalPrompt(updatedPrompt);
+        const editData = await editResponse.json();
+
+        // Update preview with edited image
+        setPreviewUrl(editData.imageUrl);
+
+        // Update in-progress scene with the new preview
+        setInProgressScene({
+          id: inProgressId,
+          name: sceneName,
+          previewUrl: editData.imageUrl,
+          startedAt: Date.now(),
+          isFollowup: true,
+        });
+
+        // Step 2: Convert edited image to File and process to 3D
+        const imageResponse = await fetch(editData.imageUrl);
+        const imageBlob = await imageResponse.blob();
+        const imageFile = new File([imageBlob], `${sceneName}.png`, {
+          type: "image/png",
+        });
+
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        const response = await fetch("/api/process", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.status === 413) {
+          throw new Error(
+            "Edited image too large. Please try a different prompt.",
+          );
+        }
+        if (response.status === 401) {
+          throw new Error("Please sign in to continue.");
+        }
+        if (response.status === 402) {
+          setShowUpgradeModal(true);
+          throw new Error(
+            "You've reached your free limit. Upgrade to continue.",
+          );
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("Server error. Please try again.");
+        }
+
+        if (!response.ok) {
+          const errorMsg = data.details
+            ? `${data.error}: ${data.details}`
+            : data.error || "Processing failed";
+          throw new Error(errorMsg);
+        }
+
+        // Clear in-progress scene
+        setInProgressScene(null);
+
+        // Update the original prompt to track the edit history
+        const updatedPrompt = originalPrompt
+          ? `${originalPrompt}. Then: ${followup}`
+          : followup;
+
+        if (data.usage) {
+          setUserUsage({
+            sceneCount: data.usage.sceneCount,
+            isPaid: data.usage.isPaid,
+            remainingUploads: data.usage.remainingUploads,
+          });
+        }
+
+        await refreshScenes();
+
+        // Only update the viewing state if user is still watching
+        if (isWatchingProcessingRef.current) {
+          setModelUrl(data.modelUrl);
+          setModelType(data.modelType || "glb");
+          setImageUrl(data.imageUrl || null);
+          setCurrentSceneName(sceneName);
+          setOriginalPrompt(updatedPrompt);
+        }
+      } catch (err) {
+        console.error("Followup processing error:", err);
+        // Only show error if user is still watching
+        if (isWatchingProcessingRef.current) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        }
+        // Clear in-progress scene on error
+        setInProgressScene(null);
+      } finally {
+        setIsRegenerating(false);
       }
-    } catch (err) {
-      console.error("Followup processing error:", err);
-      // Only show error if user is still watching
-      if (isWatchingProcessingRef.current) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      }
-      // Clear in-progress scene on error
-      setInProgressScene(null);
-    } finally {
-      setIsRegenerating(false);
-    }
-  }, [refreshScenes, canUpload, originalPrompt, imageUrl, previewUrl]);
+    },
+    [refreshScenes, canUpload, originalPrompt, imageUrl, previewUrl],
+  );
 
   // Navigate back to home during processing (keeps generation running in background)
   const handleBackDuringProcessing = useCallback(() => {
     // Mark that user is no longer watching this processing
     isWatchingProcessingRef.current = false;
-    
+
     // Reset UI state but keep the in-progress scene
     setAppState("upload");
     setProcessingStage("uploading");
@@ -766,7 +802,7 @@ function HomeContent() {
   const handleBackDuringRegeneration = useCallback(() => {
     // Mark that user is no longer watching this regeneration
     isWatchingProcessingRef.current = false;
-    
+
     // Reset UI state but keep the in-progress scene (for regeneration)
     setAppState("upload");
     setPreviewUrl(null);
@@ -784,7 +820,7 @@ function HomeContent() {
     // Clear watching state
     isWatchingProcessingRef.current = false;
     viewingSceneIdRef.current = null;
-    
+
     setAppState("upload");
     setProcessingStage("uploading");
     setProgress(0);
@@ -811,7 +847,7 @@ function HomeContent() {
     // Mark that user is now viewing a specific scene (not watching a processing)
     isWatchingProcessingRef.current = false;
     viewingSceneIdRef.current = scene.id;
-    
+
     setModelUrl(scene.modelUrl);
     setModelType(scene.modelType);
     setPreviewUrl(scene.imageUrl); // Use imageUrl as preview (from Vercel Blob)
@@ -828,18 +864,22 @@ function HomeContent() {
   // Debug controls - only show in development
   const isDev = process.env.NODE_ENV === "development";
   const [debugPanelHidden, setDebugPanelHidden] = useState(false);
-  
+
   // Debug state for 3D viewer
-  const [viewerDebugLoading, setViewerDebugLoading] = useState<boolean | number | undefined>(undefined);
-  const [viewerDebugError, setViewerDebugError] = useState<boolean | string | undefined>(undefined);
-  
+  const [viewerDebugLoading, setViewerDebugLoading] = useState<
+    boolean | number | undefined
+  >(undefined);
+  const [viewerDebugError, setViewerDebugError] = useState<
+    boolean | string | undefined
+  >(undefined);
+
   // Hover preview state for recent scenes
   const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
 
   const setDebugState = (
     state: AppState,
     stage?: ProcessingStage,
-    prog?: number
+    prog?: number,
   ) => {
     setAppState(state);
     if (stage) setProcessingStage(stage);
@@ -901,7 +941,17 @@ function HomeContent() {
               className="p-1 rounded hover:bg-white/20 opacity-60 hover:opacity-100 transition-opacity"
               title="Hide until reload"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
@@ -977,13 +1027,25 @@ function HomeContent() {
               Upgrade Modal
             </button>
             <button
-              onClick={() => setUserUsage({ sceneCount: 10, isPaid: false, remainingUploads: 0 })}
+              onClick={() =>
+                setUserUsage({
+                  sceneCount: 10,
+                  isPaid: false,
+                  remainingUploads: 0,
+                })
+              }
               className={`px-2 py-1 rounded ${userUsage?.remainingUploads === 0 ? "bg-yellow-500" : "bg-yellow-500/50 hover:bg-yellow-500/70"}`}
             >
               Max Limit
             </button>
             <button
-              onClick={() => setUserUsage({ sceneCount: 0, isPaid: false, remainingUploads: 10 })}
+              onClick={() =>
+                setUserUsage({
+                  sceneCount: 0,
+                  isPaid: false,
+                  remainingUploads: 10,
+                })
+              }
               className="px-2 py-1 rounded bg-green-500/50 hover:bg-green-500/70"
             >
               Reset Limit
@@ -1036,7 +1098,10 @@ function HomeContent() {
             </div>
           )}
           <div className="mt-2 pt-2 border-t border-white/20 text-[10px] opacity-50 tabular-nums">
-            Current: {appState} {appState === "processing" && `→ ${processingStage}`} | Scenes: {scenes.length} | Usage: {userUsage?.sceneCount ?? 0}/{FREE_SCENE_LIMIT === Infinity ? "∞" : FREE_SCENE_LIMIT}
+            Current: {appState}{" "}
+            {appState === "processing" && `→ ${processingStage}`} | Scenes:{" "}
+            {scenes.length} | Usage: {userUsage?.sceneCount ?? 0}/
+            {FREE_SCENE_LIMIT === Infinity ? "∞" : FREE_SCENE_LIMIT}
           </div>
         </div>
       )}
@@ -1061,7 +1126,10 @@ function HomeContent() {
                     className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight mb-1 flex items-center gap-2"
                   >
                     <span>Prompt</span>
-                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <ArrowRight
+                      className="w-5 h-5 sm:w-6 sm:h-6"
+                      strokeWidth={2}
+                    />
                     <span>3D</span>
                   </motion.h1>
 
@@ -1148,7 +1216,9 @@ function HomeContent() {
                               <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                                 <span className="flex items-center gap-1">
                                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
-                                  {inProgressScene.isFollowup ? "Regenerating..." : "Generating..."}
+                                  {inProgressScene.isFollowup
+                                    ? "Regenerating..."
+                                    : "Generating..."}
                                 </span>
                               </div>
                             </div>
@@ -1160,7 +1230,10 @@ function HomeContent() {
                             key={scene.id}
                             initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (inProgressScene ? index + 1 : index) * 0.05 }}
+                            transition={{
+                              delay:
+                                (inProgressScene ? index + 1 : index) * 0.05,
+                            }}
                             onClick={() => handleSelectScene(scene)}
                             className="group relative flex items-center gap-4 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] transition-all cursor-pointer"
                           >
@@ -1181,10 +1254,15 @@ function HomeContent() {
                                 {scene.name}
                               </p>
                               <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                                <span className="uppercase">{scene.modelType}</span>
+                                <span className="uppercase">
+                                  {scene.modelType}
+                                </span>
                                 <span>•</span>
                                 <span className="flex items-center gap-1 tabular-nums">
-                                  <Clock className="w-3 h-3" strokeWidth={1.5} />
+                                  <Clock
+                                    className="w-3 h-3"
+                                    strokeWidth={1.5}
+                                  />
                                   {formatRelativeTime(scene.createdAt)}
                                 </span>
                               </div>
@@ -1199,9 +1277,15 @@ function HomeContent() {
                                 }}
                                 className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                <Trash2
+                                  className="w-3.5 h-3.5"
+                                  strokeWidth={1.5}
+                                />
                               </button>
-                              <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+                              <ChevronRight
+                                className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
+                                strokeWidth={1.5}
+                              />
                             </div>
                           </motion.div>
                         ))}
@@ -1258,7 +1342,10 @@ function HomeContent() {
                     /* Placeholder shimmer while generating/uploading */
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="absolute inset-0 shimmer" />
-                      <ImageIcon size={32} className="text-[var(--text-muted)] opacity-30" />
+                      <ImageIcon
+                        size={32}
+                        className="text-[var(--text-muted)] opacity-30"
+                      />
                     </div>
                   )}
                 </div>
@@ -1267,7 +1354,9 @@ function HomeContent() {
                   status={processingStage}
                   progress={progress}
                   errorMessage={error || undefined}
-                  stageProgress={processingStage === "processing" ? stageProgress : undefined}
+                  stageProgress={
+                    processingStage === "processing" ? stageProgress : undefined
+                  }
                   mode={processingMode}
                 />
               </motion.div>
@@ -1285,10 +1374,18 @@ function HomeContent() {
                 <div className="mb-6">
                   <div className="flex items-center gap-2 w-full">
                     <button
-                      onClick={isRegenerating ? handleBackDuringRegeneration : handleReset}
+                      onClick={
+                        isRegenerating
+                          ? handleBackDuringRegeneration
+                          : handleReset
+                      }
                       className="icon-btn flex-shrink-0"
                       aria-label="Back to home"
-                      title={isRegenerating ? "Go back (regeneration continues in background)" : "Back to home"}
+                      title={
+                        isRegenerating
+                          ? "Go back (regeneration continues in background)"
+                          : "Back to home"
+                      }
                     >
                       <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
@@ -1337,13 +1434,19 @@ function HomeContent() {
               >
                 <div className="text-center">
                   <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20 mx-auto mb-6">
-                    <AlertCircle className="w-6 h-6 text-[var(--error)]" strokeWidth={1.5} />
+                    <AlertCircle
+                      className="w-6 h-6 text-[var(--error)]"
+                      strokeWidth={1.5}
+                    />
                   </div>
                   <h2 className="text-2xl font-semibold mb-2">
-                    {isConfigError ? "Configuration Required" : "Processing Failed"}
+                    {isConfigError
+                      ? "Configuration Required"
+                      : "Processing Failed"}
                   </h2>
                   <p className="text-[var(--text-muted)] mb-6">
-                    {error || "Something went wrong while processing your image."}
+                    {error ||
+                      "Something went wrong while processing your image."}
                   </p>
                 </div>
 
@@ -1389,7 +1492,10 @@ function HomeContent() {
       <footer className="py-8 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <Box className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} />
+            <Box
+              className="w-4 h-4 text-[var(--text-muted)]"
+              strokeWidth={1.5}
+            />
             <span className="text-sm text-[var(--text-muted)]">
               Powered by{" "}
               <a
@@ -1398,7 +1504,7 @@ function HomeContent() {
                 rel="noopener noreferrer"
                 className="text-[var(--foreground)] hover:underline"
               >
-              ML-SHARP
+                ML-SHARP
               </a>
             </span>
           </div>
@@ -1438,13 +1544,13 @@ function HomeContent() {
               </button>
               <AnimatePresence>
                 {showHelpMenu && (
-                <motion.div
-                   initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                   transition={{ duration: 0.1 }}
-                   style={{ transformOrigin: "bottom right" }}
-                   className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
-                 >
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.1 }}
+                    style={{ transformOrigin: "bottom right" }}
+                    className="absolute bottom-full right-0 mb-2 w-40 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-lg shadow-lg p-1.5 flex flex-col"
+                  >
                     <ThemePicker />
                     <a
                       href="https://x.com/messages/compose?recipient_id=1325862778603769856"
@@ -1453,7 +1559,10 @@ function HomeContent() {
                       className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-[var(--foreground)]/5 rounded-md"
                       onClick={() => setShowHelpMenu(false)}
                     >
-                      <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <MessageCircle
+                        className="w-3.5 h-3.5"
+                        strokeWidth={1.5}
+                      />
                       <span>Contact Support</span>
                     </a>
                     <button

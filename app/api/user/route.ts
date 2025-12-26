@@ -5,12 +5,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
@@ -27,16 +24,13 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       ...user,
       canUpload: user.isPaid || user.sceneCount < FREE_SCENE_LIMIT,
-      remainingUploads: user.isPaid 
+      remainingUploads: user.isPaid
         ? null // unlimited
         : Math.max(0, FREE_SCENE_LIMIT - user.sceneCount),
       limit: FREE_SCENE_LIMIT,
@@ -45,7 +39,7 @@ export async function GET() {
     console.error("Error fetching user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

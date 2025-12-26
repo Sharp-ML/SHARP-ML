@@ -30,6 +30,7 @@ modal deploy sharp_api.py
 ```
 
 After deployment, Modal will display your endpoint URL. It looks like:
+
 ```
 https://YOUR_USERNAME--apple-sharp-sharpmodel-generate.modal.run
 ```
@@ -191,25 +192,25 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `NEXTAUTH_URL` | Yes | Your app URL |
-| `NEXTAUTH_SECRET` | Yes | Random secret for JWT signing |
-| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
-| `NEXT_PUBLIC_APP_URL` | Yes | Your app URL (for redirects) |
-| `MODAL_ENDPOINT_URL` | Yes | Your Modal Sharp endpoint URL |
-| `BLOB_READ_WRITE_TOKEN` | Yes | Auto-provided by Vercel Blob |
+| Variable                | Required | Description                   |
+| ----------------------- | -------- | ----------------------------- |
+| `DATABASE_URL`          | Yes      | PostgreSQL connection string  |
+| `NEXTAUTH_URL`          | Yes      | Your app URL                  |
+| `NEXTAUTH_SECRET`       | Yes      | Random secret for JWT signing |
+| `GOOGLE_CLIENT_ID`      | Yes      | Google OAuth client ID        |
+| `GOOGLE_CLIENT_SECRET`  | Yes      | Google OAuth client secret    |
+| `NEXT_PUBLIC_APP_URL`   | Yes      | Your app URL (for redirects)  |
+| `MODAL_ENDPOINT_URL`    | Yes      | Your Modal Sharp endpoint URL |
+| `BLOB_READ_WRITE_TOKEN` | Yes      | Auto-provided by Vercel Blob  |
 
 ### Usage Limits
 
 - **Free tier**: 10 scene generations per user
 
-
 ### Modal Configuration
 
 The `modal/sharp_api.py` file configures:
+
 - **GPU**: A10G (good performance/cost ratio)
 - **Timeout**: 300 seconds
 - **Container idle**: 300 seconds (keeps warm for faster subsequent requests)
@@ -226,19 +227,25 @@ The `modal/sharp_api.py` file configures:
 ## Troubleshooting
 
 ### "Model is loading" error
+
 The Modal container is starting up. This takes 30-60 seconds on cold start. Try again after waiting.
 
 ### "Cannot connect to Modal endpoint" error
+
 Check that:
+
 1. Your `MODAL_ENDPOINT_URL` is correct
 2. The Modal app is deployed (`modal deploy sharp_api.py`)
 3. Your Modal account is active
 
 ### "Authentication required" error
+
 Make sure you're signed in with Google. The app requires authentication to protect against abuse.
 
 ### Slow first request
+
 The first request after inactivity requires:
+
 1. Starting the Modal container (~10-20s)
 2. Loading the Sharp model (~10-20s)
 3. Running inference (~1-5s)

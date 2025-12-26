@@ -6,12 +6,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Only return scenes owned by this user
@@ -33,7 +30,7 @@ export async function GET() {
     console.error("Error fetching scenes:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -42,21 +39,15 @@ export async function GET() {
 export async function DELETE(request: Request) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { sceneId } = await request.json();
 
     if (!sceneId) {
-      return NextResponse.json(
-        { error: "Scene ID required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Scene ID required" }, { status: 400 });
     }
 
     // Verify the scene belongs to this user before deleting
@@ -66,18 +57,12 @@ export async function DELETE(request: Request) {
     });
 
     if (!scene) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     if (scene.userId !== session.user.id) {
       // Don't reveal whether the scene exists to unauthorized users
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     await prisma.scene.delete({
@@ -89,7 +74,7 @@ export async function DELETE(request: Request) {
     console.error("Error deleting scene:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

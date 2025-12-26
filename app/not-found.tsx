@@ -14,7 +14,10 @@ export default function NotFound() {
         >
           {/* 404 Icon */}
           <div className="icon-box bg-[var(--surface-elevated)] border-[var(--border)] mx-auto mb-6 w-16 h-16 rounded-2xl">
-            <Search className="w-8 h-8 text-[var(--text-muted)]" strokeWidth={1.5} />
+            <Search
+              className="w-8 h-8 text-[var(--text-muted)]"
+              strokeWidth={1.5}
+            />
           </div>
 
           {/* 404 Display */}
@@ -32,7 +35,10 @@ export default function NotFound() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/" className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2">
+            <a
+              href="/"
+              className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"
+            >
               <Home className="w-4 h-4" strokeWidth={2} />
               <span>Back to Home</span>
             </a>

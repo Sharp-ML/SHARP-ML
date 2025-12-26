@@ -60,17 +60,20 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Authentication required", message: "Please sign in to continue" },
-        { status: 401 }
+        {
+          error: "Authentication required",
+          message: "Please sign in to continue",
+        },
+        { status: 401 },
       );
     }
 
     // Check for Gemini API key
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    
+
     if (!geminiApiKey) {
       return NextResponse.json(
         {
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
             step3: "Add GEMINI_API_KEY to your environment variables",
           },
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
         { error: "Invalid request", message: "A prompt is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -108,10 +111,12 @@ export async function POST(request: NextRequest) {
     // Generate image using Gemini's image generation model
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
-      contents: [{ 
-        role: "user",
-        parts: [{ text: fullPrompt }]
-      }],
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: fullPrompt }],
+        },
+      ],
       config: {
         responseModalities: ["image", "text"],
       },
@@ -123,7 +128,7 @@ export async function POST(request: NextRequest) {
       console.error("No content in Gemini response");
       return NextResponse.json(
         { error: "Image generation failed", message: "No image was generated" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -143,17 +148,17 @@ export async function POST(request: NextRequest) {
       console.error("No image data in Gemini response");
       return NextResponse.json(
         { error: "Image generation failed", message: "No image data received" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(imageData, "base64");
-    
+
     // Generate unique ID for this image
     const id = generateId();
     const ext = mimeType.includes("png") ? "png" : "jpg";
-    
+
     let imageUrl: string;
     const localDev = isLocalDev();
 
@@ -192,40 +197,41 @@ export async function POST(request: NextRequest) {
     // Handle specific Gemini errors
     if (errorMessage.includes("API key")) {
       return NextResponse.json(
-        { 
-          error: "Invalid API key", 
+        {
+          error: "Invalid API key",
           message: "The Gemini API key is invalid or expired.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (errorMessage.includes("quota") || errorMessage.includes("rate")) {
       return NextResponse.json(
-        { 
-          error: "Rate limit exceeded", 
+        {
+          error: "Rate limit exceeded",
           message: "Too many requests. Please try again in a moment.",
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
     if (errorMessage.includes("safety") || errorMessage.includes("blocked")) {
       return NextResponse.json(
-        { 
-          error: "Content blocked", 
-          message: "The prompt was blocked by safety filters. Please try a different prompt.",
+        {
+          error: "Content blocked",
+          message:
+            "The prompt was blocked by safety filters. Please try a different prompt.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
-      { 
-        error: "Image generation failed", 
+      {
+        error: "Image generation failed",
         message: errorMessage,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

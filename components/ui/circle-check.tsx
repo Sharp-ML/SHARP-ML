@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect, useRef } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect, useRef } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface CircleCheckIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -31,13 +31,13 @@ const PATH_VARIANTS: Variants = {
   },
 };
 
-function CircleCheckIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function CircleCheckIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: CircleCheckIconProps) {
   const controls = useAnimation();
   const hasAnimated = useRef(false);
@@ -46,10 +46,10 @@ function CircleCheckIcon({
     if (isAnimating !== undefined) {
       if (isAnimating && !hasAnimated.current) {
         // Only animate once when first triggered
-        controls.start('animate');
+        controls.start("animate");
         hasAnimated.current = true;
       } else if (!isAnimating) {
-        controls.start('normal');
+        controls.start("normal");
         hasAnimated.current = false;
       }
     }
@@ -57,14 +57,14 @@ function CircleCheckIcon({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -99,6 +99,6 @@ function CircleCheckIcon({
   );
 }
 
-CircleCheckIcon.displayName = 'CircleCheckIcon';
+CircleCheckIcon.displayName = "CircleCheckIcon";
 
 export { CircleCheckIcon };

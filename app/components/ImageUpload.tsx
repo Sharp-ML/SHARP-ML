@@ -32,13 +32,13 @@ export default function ImageUpload({
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: FileRejection[]) => {
       setFileSizeError(null);
-      
+
       // Handle rejected files first
       if (fileRejections.length > 0) {
         const rejection = fileRejections[0];
         const errorCode = rejection.errors[0]?.code;
         let error: string;
-        
+
         if (errorCode === "file-too-large") {
           const sizeMB = (rejection.file.size / (1024 * 1024)).toFixed(1);
           error = `File too large (${sizeMB}MB). Maximum size is 4.5MB.`;
@@ -47,16 +47,16 @@ export default function ImageUpload({
         } else {
           error = rejection.errors[0]?.message || "File could not be uploaded.";
         }
-        
+
         setFileSizeError(error);
         onError?.(error);
         return;
       }
-      
+
       // Handle accepted files
       if (acceptedFiles.length > 0 && !disabled) {
         const file = acceptedFiles[0];
-        
+
         setFileName(file.name);
         const reader = new FileReader();
         reader.onload = () => {
@@ -66,7 +66,7 @@ export default function ImageUpload({
         onImageSelect(file);
       }
     },
-    [onImageSelect, disabled, onError]
+    [onImageSelect, disabled, onError],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -168,7 +168,10 @@ export default function ImageUpload({
                 className="relative"
               >
                 <div className="icon-box">
-                  <UploadIcon size={20} className="text-[var(--text-secondary)]" />
+                  <UploadIcon
+                    size={20}
+                    className="text-[var(--text-secondary)]"
+                  />
                 </div>
               </motion.div>
 

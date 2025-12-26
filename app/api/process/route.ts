@@ -24,11 +24,14 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Authentication required", message: "Please sign in to continue" },
-        { status: 401 }
+        {
+          error: "Authentication required",
+          message: "Please sign in to continue",
+        },
+        { status: 401 },
       );
     }
 
@@ -43,10 +46,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Note: Email verification check removed since we only use Google OAuth,
@@ -55,12 +55,12 @@ export async function POST(request: NextRequest) {
     // Check usage limits for non-paid users
     if (!user.isPaid && user.sceneCount >= FREE_SCENE_LIMIT) {
       return NextResponse.json(
-        { 
-          error: "Usage limit reached", 
+        {
+          error: "Usage limit reached",
           message: `You've used all ${FREE_SCENE_LIMIT} free scenes. Upgrade to continue.`,
           requiresPayment: true,
         },
-        { status: 402 } // Payment Required
+        { status: 402 }, // Payment Required
       );
     }
 
@@ -76,19 +76,20 @@ export async function POST(request: NextRequest) {
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
         { error: "Invalid file type. Please upload PNG, JPG, or WEBP." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Check for required environment variables
     const modalEndpointUrl = process.env.MODAL_ENDPOINT_URL;
     const localDev = isLocalDev();
-    
+
     if (!modalEndpointUrl) {
       return NextResponse.json(
         {
           error: "Server configuration error",
-          message: "MODAL_ENDPOINT_URL is not configured. Please deploy the Sharp model to Modal and add the endpoint URL.",
+          message:
+            "MODAL_ENDPOINT_URL is not configured. Please deploy the Sharp model to Modal and add the endpoint URL.",
           setup: {
             step1: "Install Modal CLI: pip install modal",
             step2: "Authenticate: modal token new",
@@ -97,20 +98,20 @@ export async function POST(request: NextRequest) {
             step5: "Redeploy your application",
           },
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // Generate unique ID for this upload
     const id = generateId();
     const ext = file.name.split(".").pop() || "jpg";
-    
+
     // Convert image to base64 for the Modal API call
     const imageBuffer = await file.arrayBuffer();
     const imageBase64 = Buffer.from(imageBuffer).toString("base64");
-    
+
     let imageUrl: string;
-    
+
     if (localDev) {
       // Local development: save to public folder
       const uploadsDir = path.join(process.cwd(), "public", "uploads");
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     // Call the Apple Sharp model via Modal endpoint
     console.log("Calling Modal endpoint for Sharp inference...");
-    
+
     const response = await fetch(modalEndpointUrl, {
       method: "POST",
       headers: {
@@ -147,30 +148,31 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Modal endpoint error:", errorText);
-      
+
       if (response.status === 503 || response.status === 502) {
         return NextResponse.json(
-          { 
-            error: "Model is loading", 
-            details: "The Sharp model container is warming up. Please try again in 30-60 seconds.",
+          {
+            error: "Model is loading",
+            details:
+              "The Sharp model container is warming up. Please try again in 30-60 seconds.",
           },
-          { status: 503 }
+          { status: 503 },
         );
       }
-      
+
       return NextResponse.json(
         { error: "3D generation failed", details: errorText },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
     const result = await response.json();
-    
+
     if (!result.success) {
       console.error("Sharp generation failed:", result.error);
       return NextResponse.json(
         { error: "3D generation failed", details: result.error },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -179,12 +181,12 @@ export async function POST(request: NextRequest) {
     if (!plyBase64) {
       return NextResponse.json(
         { error: "3D generation failed - no PLY data received" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const plyBuffer = Buffer.from(plyBase64, "base64");
-    
+
     let modelUrl: string;
 
     if (localDev) {
@@ -242,8 +244,8 @@ export async function POST(request: NextRequest) {
       usage: {
         sceneCount: updatedUser.sceneCount,
         isPaid: updatedUser.isPaid,
-        remainingUploads: updatedUser.isPaid 
-          ? null 
+        remainingUploads: updatedUser.isPaid
+          ? null
           : Math.max(0, FREE_SCENE_LIMIT - updatedUser.sceneCount),
       },
     });
@@ -251,49 +253,60 @@ export async function POST(request: NextRequest) {
     console.error("Processing error:", error);
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // Handle specific errors
     if (error instanceof Error) {
-      if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
+      if (
+        error.message.includes("fetch failed") ||
+        error.message.includes("ECONNREFUSED")
+      ) {
         return NextResponse.json(
-          { 
-            error: "Cannot connect to Modal endpoint", 
+          {
+            error: "Cannot connect to Modal endpoint",
             details: "The Modal endpoint may be down or the URL is incorrect.",
-            hint: "Check that your MODAL_ENDPOINT_URL is correct and the Modal app is deployed."
+            hint: "Check that your MODAL_ENDPOINT_URL is correct and the Modal app is deployed.",
           },
-          { status: 503 }
+          { status: 503 },
         );
       }
-      if (error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("ETIMEDOUT")
+      ) {
         return NextResponse.json(
-          { 
-            error: "Request timeout", 
-            details: "The Sharp model took too long to respond. This may happen on first request when the container is cold.",
-            hint: "Try again - subsequent requests should be faster."
+          {
+            error: "Request timeout",
+            details:
+              "The Sharp model took too long to respond. This may happen on first request when the container is cold.",
+            hint: "Try again - subsequent requests should be faster.",
           },
-          { status: 504 }
+          { status: 504 },
         );
       }
       // Handle Vercel Blob errors
-      if (error.message.includes("BLOB_READ_WRITE_TOKEN") || error.message.includes("blob")) {
+      if (
+        error.message.includes("BLOB_READ_WRITE_TOKEN") ||
+        error.message.includes("blob")
+      ) {
         return NextResponse.json(
-          { 
-            error: "Blob storage error", 
+          {
+            error: "Blob storage error",
             details: errorMessage,
-            setup: "Make sure BLOB_READ_WRITE_TOKEN is set in your Vercel environment variables"
+            setup:
+              "Make sure BLOB_READ_WRITE_TOKEN is set in your Vercel environment variables",
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
 
     return NextResponse.json(
-      { 
-        error: "Failed to process image", 
+      {
+        error: "Failed to process image",
         details: errorMessage,
-        hint: "Check Vercel function logs for more details"
+        hint: "Check Vercel function logs for more details",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

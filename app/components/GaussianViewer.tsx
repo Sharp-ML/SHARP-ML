@@ -50,19 +50,25 @@ export default function GaussianViewer({
   const [errorInternal, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("scene");
-  const videoAnimationRef = useRef<{ startTime: number; active: boolean }>({ startTime: 0, active: false });
+  const videoAnimationRef = useRef<{ startTime: number; active: boolean }>({
+    startTime: 0,
+    active: false,
+  });
   const keysPressed = useRef<Set<string>>(new Set());
 
   // Debug overrides
-  const isLoading = debugLoading !== undefined 
-    ? Boolean(debugLoading) 
-    : isLoadingInternal;
-  const loadProgress = typeof debugLoading === "number" 
-    ? debugLoading 
-    : loadProgressInternal;
-  const error = debugError !== undefined
-    ? (typeof debugError === "string" ? debugError : debugError ? "Debug error state" : null)
-    : errorInternal;
+  const isLoading =
+    debugLoading !== undefined ? Boolean(debugLoading) : isLoadingInternal;
+  const loadProgress =
+    typeof debugLoading === "number" ? debugLoading : loadProgressInternal;
+  const error =
+    debugError !== undefined
+      ? typeof debugError === "string"
+        ? debugError
+        : debugError
+          ? "Debug error state"
+          : null
+      : errorInternal;
 
   useEffect(() => {
     // Skip initialization in debug mode
@@ -94,7 +100,7 @@ export default function GaussianViewer({
         console.error("Error initializing viewer:", err);
         if (!disposed) {
           setError(
-            "Failed to load 3D scene. The model may still be processing."
+            "Failed to load 3D scene. The model may still be processing.",
           );
           setIsLoading(false);
         }
@@ -122,7 +128,12 @@ export default function GaussianViewer({
         rendererRef.current = renderer;
 
         // Create camera
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
+        const camera = new THREE.PerspectiveCamera(
+          45,
+          width / height,
+          0.01,
+          500,
+        );
         camera.position.set(0, 0, -3);
         camera.up.set(0, -1, 0);
         camera.lookAt(0, 0, 0);
@@ -152,25 +163,27 @@ export default function GaussianViewer({
         };
         controls.enabled = true; // Always enable controls for interaction
         controlsRef.current = controls;
-        
+
         // Custom wheel handler to allow flying through the scene (not just zooming to target)
         if (!mini) {
           const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
             if (videoAnimationRef.current.active) return;
-            
+
             const dollySpeed = 0.002;
             const delta = e.deltaY * dollySpeed;
-            
+
             // Get camera forward direction and move both camera and target
             const forward = new THREE.Vector3();
             camera.getWorldDirection(forward);
-            
+
             camera.position.addScaledVector(forward, -delta);
             controls.target.addScaledVector(forward, -delta);
           };
-          
-          renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+
+          renderer.domElement.addEventListener("wheel", handleWheel, {
+            passive: false,
+          });
         }
 
         // Create viewer with our renderer and camera, manual mode
@@ -206,41 +219,42 @@ export default function GaussianViewer({
         const animate = () => {
           if (disposed) return;
           animationFrameId = requestAnimationFrame(animate);
-          
+
           // Check if we're in video mode (not applicable in mini mode)
           if (videoAnimationRef.current.active && !mini) {
-            const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+            const elapsed =
+              (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
             // Controlled camera movement optimized to showcase 3D depth effects
             // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
-            
+
             // Phase 1: Slow, controlled speed for smooth cinematic feel
             const primarySpeed = 0.12; // Main rotation speed
             const secondarySpeed = 0.09; // Secondary movement for figure-8
             const dollySpeed = 0.15; // Forward/backward movement speed
-            
+
             // Keep camera close and focused for maximum parallax effect
             const baseDistance = 1.2; // Close to subject for depth emphasis
             const orbitRadius = 0.3; // Tight horizontal movement
             const verticalRange = 0.15; // Subtle vertical movement
             const dollyRange = 0.25; // Forward/backward dolly for depth
-            
+
             // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
             // The 2x frequency on one axis creates the figure-8 pattern
             const t = elapsed * primarySpeed;
             const t2 = elapsed * secondarySpeed;
-            
+
             // Lemniscate parametric equations, scaled and smoothed
             const lemniscateX = Math.sin(t) * orbitRadius;
             const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
-            
+
             // Dolly movement (forward/backward) to emphasize depth parallax
             // This is the key to showing off 3D - moving through the scene
             const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
-            
+
             // Gentle vertical drift to add dimensionality
             const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
-            
+
             // Compose final camera position
             const x = lemniscateX;
             const y = verticalOffset;
@@ -252,59 +266,59 @@ export default function GaussianViewer({
             controls.enabled = false;
           } else if (!mini) {
             controls.enabled = true;
-            
+
             // Apply WASD keyboard controls (not in mini mode)
             const keys = keysPressed.current;
             const moveSpeed = 0.03;
             const rotateSpeed = 0.02;
-            
+
             if (keys.size > 0) {
               // Get camera's forward and right vectors
               const forward = new THREE.Vector3();
               camera.getWorldDirection(forward);
               const right = new THREE.Vector3();
               right.crossVectors(forward, camera.up).normalize();
-              
+
               // W/S - move forward/backward (dolly)
-              if (keys.has('w')) {
+              if (keys.has("w")) {
                 camera.position.addScaledVector(forward, moveSpeed);
                 controls.target.addScaledVector(forward, moveSpeed);
               }
-              if (keys.has('s')) {
+              if (keys.has("s")) {
                 camera.position.addScaledVector(forward, -moveSpeed);
                 controls.target.addScaledVector(forward, -moveSpeed);
               }
-              
+
               // A/D - rotate around target (orbit left/right)
-              if (keys.has('a')) {
+              if (keys.has("a")) {
                 const angle = rotateSpeed;
                 const offset = camera.position.clone().sub(controls.target);
                 offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
                 camera.position.copy(controls.target).add(offset);
               }
-              if (keys.has('d')) {
+              if (keys.has("d")) {
                 const angle = -rotateSpeed;
                 const offset = camera.position.clone().sub(controls.target);
                 offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
                 camera.position.copy(controls.target).add(offset);
               }
-              
+
               // Q/E - move up/down
-              if (keys.has('q')) {
+              if (keys.has("q")) {
                 camera.position.y -= moveSpeed;
                 controls.target.y -= moveSpeed;
               }
-              if (keys.has('e')) {
+              if (keys.has("e")) {
                 camera.position.y += moveSpeed;
                 controls.target.y += moveSpeed;
               }
             }
           }
           // In mini mode, controls stay enabled for drag-to-rotate interaction
-          
+
           // Always update controls (for autoRotate and damping)
           controls.update();
-          
+
           // Update and render the Gaussian splats
           viewer.update();
           viewer.render();
@@ -339,7 +353,12 @@ export default function GaussianViewer({
       scene.background = new THREE.Color(0x1a1a1a);
 
       // Create camera
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        width / height,
+        0.01,
+        1000,
+      );
       camera.position.set(0, 1, 3);
 
       // Create renderer
@@ -380,25 +399,27 @@ export default function GaussianViewer({
       };
       controls.enabled = true; // Always enable controls for interaction
       controlsRef.current = controls;
-      
+
       // Custom wheel handler to allow flying through the scene (not just zooming to target)
       if (!mini) {
         const handleWheel = (e: WheelEvent) => {
           e.preventDefault();
           if (videoAnimationRef.current.active) return;
-          
+
           const dollySpeed = 0.002;
           const delta = e.deltaY * dollySpeed;
-          
+
           // Get camera forward direction and move both camera and target
           const forward = new THREE.Vector3();
           camera.getWorldDirection(forward);
-          
+
           camera.position.addScaledVector(forward, -delta);
           controls.target.addScaledVector(forward, -delta);
         };
-        
-        renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+
+        renderer.domElement.addEventListener("wheel", handleWheel, {
+          passive: false,
+        });
       }
 
       // Add lights
@@ -416,9 +437,7 @@ export default function GaussianViewer({
 
       // Add environment
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
-      const envTexture = pmremGenerator.fromScene(
-        new THREE.Scene()
-      ).texture;
+      const envTexture = pmremGenerator.fromScene(new THREE.Scene()).texture;
       scene.environment = envTexture;
 
       // Load GLB model
@@ -458,7 +477,9 @@ export default function GaussianViewer({
         },
         (progress) => {
           if (progress.total > 0) {
-            setLoadProgress(Math.round((progress.loaded / progress.total) * 100));
+            setLoadProgress(
+              Math.round((progress.loaded / progress.total) * 100),
+            );
           }
         },
         (err) => {
@@ -467,49 +488,50 @@ export default function GaussianViewer({
             setError("Failed to load 3D model");
             setIsLoading(false);
           }
-        }
+        },
       );
 
       // Animation loop with video mode support
       const animate = () => {
         if (disposed) return;
         animationFrameId = requestAnimationFrame(animate);
-        
+
         // Check if we're in video mode (not applicable in mini mode)
         if (videoAnimationRef.current.active && !mini) {
-          const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
+          const elapsed =
+            (Date.now() - videoAnimationRef.current.startTime) / 1000;
 
           // Controlled camera movement optimized to showcase 3D depth effects
           // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
-          
+
           // Phase 1: Slow, controlled speed for smooth cinematic feel
           const primarySpeed = 0.12; // Main rotation speed
           const secondarySpeed = 0.09; // Secondary movement for figure-8
           const dollySpeed = 0.15; // Forward/backward movement speed
-          
+
           // Keep camera close and focused for maximum parallax effect
           const baseDistance = 1.6; // Distance from center (slightly further for GLB models)
           const baseHeight = 0.6; // Slightly elevated viewpoint
           const orbitRadius = 0.35; // Tight horizontal movement
           const verticalRange = 0.2; // Subtle vertical movement
           const dollyRange = 0.3; // Forward/backward dolly for depth
-          
+
           // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
           // The 2x frequency on one axis creates the figure-8 pattern
           const t = elapsed * primarySpeed;
           const t2 = elapsed * secondarySpeed;
-          
+
           // Lemniscate parametric equations, scaled and smoothed
           const lemniscateX = Math.sin(t) * orbitRadius;
           const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
-          
+
           // Dolly movement (forward/backward) to emphasize depth parallax
           // This is the key to showing off 3D - moving through the scene
           const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
-          
+
           // Gentle vertical drift to add dimensionality
           const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
-          
+
           // Compose final camera position
           const x = lemniscateX;
           const y = baseHeight + verticalOffset;
@@ -522,59 +544,59 @@ export default function GaussianViewer({
           controls.enabled = false;
         } else if (!mini) {
           controls.enabled = true;
-          
+
           // Apply WASD keyboard controls (not in mini mode)
           const keys = keysPressed.current;
           const moveSpeed = 0.05;
           const rotateSpeed = 0.02;
-          
+
           if (keys.size > 0) {
             // Get camera's forward and right vectors
             const forward = new THREE.Vector3();
             camera.getWorldDirection(forward);
             const right = new THREE.Vector3();
             right.crossVectors(forward, camera.up).normalize();
-            
+
             // W/S - move forward/backward (dolly)
-            if (keys.has('w')) {
+            if (keys.has("w")) {
               camera.position.addScaledVector(forward, moveSpeed);
               controls.target.addScaledVector(forward, moveSpeed);
             }
-            if (keys.has('s')) {
+            if (keys.has("s")) {
               camera.position.addScaledVector(forward, -moveSpeed);
               controls.target.addScaledVector(forward, -moveSpeed);
             }
-            
+
             // A/D - rotate around target (orbit left/right)
-            if (keys.has('a')) {
+            if (keys.has("a")) {
               const angle = rotateSpeed;
               const offset = camera.position.clone().sub(controls.target);
               offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
               camera.position.copy(controls.target).add(offset);
             }
-            if (keys.has('d')) {
+            if (keys.has("d")) {
               const angle = -rotateSpeed;
               const offset = camera.position.clone().sub(controls.target);
               offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
               camera.position.copy(controls.target).add(offset);
             }
-            
+
             // Q/E - move up/down
-            if (keys.has('q')) {
+            if (keys.has("q")) {
               camera.position.y -= moveSpeed;
               controls.target.y -= moveSpeed;
             }
-            if (keys.has('e')) {
+            if (keys.has("e")) {
               camera.position.y += moveSpeed;
               controls.target.y += moveSpeed;
             }
           }
         }
         // In mini mode, controls stay enabled for drag-to-rotate interaction
-        
+
         // Always update controls (for autoRotate and damping)
         controls.update();
-        
+
         renderer.render(scene, camera);
       };
       animate();
@@ -603,7 +625,10 @@ export default function GaussianViewer({
 
       // Dispose Gaussian Splat viewer (may be nested in object)
       if (viewerRef.current) {
-        const viewerObj = viewerRef.current as { viewer?: { dispose: () => void }; dispose?: () => void };
+        const viewerObj = viewerRef.current as {
+          viewer?: { dispose: () => void };
+          dispose?: () => void;
+        };
         if (viewerObj.viewer?.dispose) {
           viewerObj.viewer.dispose();
         } else if (viewerObj.dispose) {
@@ -643,11 +668,11 @@ export default function GaussianViewer({
   };
 
   const handleReset = () => {
-    const viewer = viewerRef.current as { 
-      camera?: THREE.PerspectiveCamera; 
+    const viewer = viewerRef.current as {
+      camera?: THREE.PerspectiveCamera;
       controls?: OrbitControls;
     } | null;
-    
+
     if (viewer?.camera && viewer?.controls) {
       // Reset camera to initial position based on model type
       if (modelType === "ply") {
@@ -657,7 +682,7 @@ export default function GaussianViewer({
         viewer.camera.position.set(0, 1, 3);
         viewer.camera.up.set(0, 1, 0);
       }
-      
+
       // Reset controls target to center
       viewer.controls.target.set(0, 0, 0);
       viewer.camera.lookAt(0, 0, 0);
@@ -678,7 +703,9 @@ export default function GaussianViewer({
       rendererRef.current.setSize(newWidth, newHeight);
 
       // Update camera aspect ratio if we have a ThreeJS viewer
-      const viewer = viewerRef.current as { camera?: THREE.PerspectiveCamera } | null;
+      const viewer = viewerRef.current as {
+        camera?: THREE.PerspectiveCamera;
+      } | null;
       if (viewer?.camera) {
         viewer.camera.aspect = newWidth / newHeight;
         viewer.camera.updateProjectionMatrix();
@@ -686,8 +713,8 @@ export default function GaussianViewer({
     };
 
     // Trigger resize after delays to catch CSS transitions
-    const timeouts = [50, 100, 200, 300].map(delay => 
-      setTimeout(handleResize, delay)
+    const timeouts = [50, 100, 200, 300].map((delay) =>
+      setTimeout(handleResize, delay),
     );
 
     // Also listen to window resize while expanded
@@ -748,9 +775,13 @@ export default function GaussianViewer({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle WASD when not typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
       const key = e.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key)) {
+      if (["w", "a", "s", "d", "q", "e"].includes(key)) {
         keysPressed.current.add(key);
       }
     };
@@ -765,14 +796,14 @@ export default function GaussianViewer({
       keysPressed.current.clear();
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
   }, []);
 
@@ -826,12 +857,16 @@ export default function GaussianViewer({
                 isExpanded ? "bg-[#1a1a1a]/90" : "bg-[var(--surface)]/90"
               }`}
             >
-              <p className={`text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}>
+              <p
+                className={`text-lg font-medium mb-2 ${isExpanded ? "text-white" : ""}`}
+              >
                 Loading 3D Scene
               </p>
-              <div className={`w-48 h-1.5 rounded-full overflow-hidden ${
-                isExpanded ? "bg-white/10" : "bg-[var(--surface-elevated)]"
-              }`}>
+              <div
+                className={`w-48 h-1.5 rounded-full overflow-hidden ${
+                  isExpanded ? "bg-white/10" : "bg-[var(--surface-elevated)]"
+                }`}
+              >
                 <motion.div
                   className={`h-full rounded-full ${isExpanded ? "bg-white" : "bg-[var(--accent)]"}`}
                   initial={{ width: 0 }}
@@ -839,12 +874,14 @@ export default function GaussianViewer({
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              <p className={`text-sm mt-2 ${isExpanded ? "text-white/60" : "text-[var(--text-muted)]"}`}>
+              <p
+                className={`text-sm mt-2 ${isExpanded ? "text-white/60" : "text-[var(--text-muted)]"}`}
+              >
                 {loadProgress}%
               </p>
             </motion.div>
           )}
-          
+
           {/* Mini loading spinner */}
           {isLoading && mini && (
             <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface-elevated)]">
@@ -862,9 +899,11 @@ export default function GaussianViewer({
               }`}
             >
               <p className="text-lg font-medium mb-2 text-red-400">Error</p>
-              <p className={`text-sm text-center max-w-sm ${
-                isExpanded ? "text-white/60" : "text-[var(--text-muted)]"
-              }`}>
+              <p
+                className={`text-sm text-center max-w-sm ${
+                  isExpanded ? "text-white/60" : "text-[var(--text-muted)]"
+                }`}
+              >
                 {error}
               </p>
             </motion.div>
@@ -882,9 +921,11 @@ export default function GaussianViewer({
               >
                 {/* Pulsing border glow */}
                 <div className="absolute inset-0 rounded-2xl animate-regenerate-pulse" />
-                
+
                 {/* Updating badge */}
-                <div className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}>
+                <div
+                  className={`absolute z-40 ${isExpanded ? "top-4 left-4" : "top-4 left-4"}`}
+                >
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -906,9 +947,11 @@ export default function GaussianViewer({
           {!isLoading && !error && !mini && (
             <>
               {/* Top right controls */}
-              <div className={`absolute z-20 pointer-events-auto flex gap-2 ${
-                isExpanded ? "top-4 right-4" : "top-4 right-4"
-              }`}>
+              <div
+                className={`absolute z-20 pointer-events-auto flex gap-2 ${
+                  isExpanded ? "top-4 right-4" : "top-4 right-4"
+                }`}
+              >
                 {/* Close button when expanded */}
                 {isExpanded && (
                   <button
@@ -920,7 +963,7 @@ export default function GaussianViewer({
                     <X className="w-4 h-4 text-white" />
                   </button>
                 )}
-                
+
                 {/* Reset button */}
                 <button
                   type="button"
@@ -935,9 +978,11 @@ export default function GaussianViewer({
                   }`}
                   title="Reset view"
                 >
-                  <RotateCcw className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"} />
+                  <RotateCcw
+                    className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"}
+                  />
                 </button>
-                
+
                 {/* Expand button when not expanded */}
                 {!isExpanded && (
                   <button
@@ -967,7 +1012,9 @@ export default function GaussianViewer({
                   }`}
                   title={`Download ${modelType === "ply" ? "PLY" : "GLB"}`}
                 >
-                  <Download className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"} />
+                  <Download
+                    className={isExpanded ? "w-4 h-4 text-white" : "w-4 h-4"}
+                  />
                 </button>
               </div>
 
@@ -982,11 +1029,13 @@ export default function GaussianViewer({
                     transition={{ duration: 0.2 }}
                     className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
                   >
-                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
-                      isExpanded
-                        ? "text-white/60 bg-white/10 backdrop-blur-sm border border-white/20"
-                        : "glass text-[var(--text-muted)]"
-                    }`}>
+                    <div
+                      className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
+                        isExpanded
+                          ? "text-white/60 bg-white/10 backdrop-blur-sm border border-white/20"
+                          : "glass text-[var(--text-muted)]"
+                      }`}
+                    >
                       <span className="flex items-center gap-1.5">
                         <MousePointer2 className="w-3.5 h-3.5" />
                         Drag to rotate
@@ -1006,11 +1055,13 @@ export default function GaussianViewer({
                     transition={{ duration: 0.2 }}
                     className={`absolute z-20 ${isExpanded ? "bottom-6 left-6" : "bottom-4 left-4"}`}
                   >
-                    <div className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
-                      isExpanded
-                        ? "bg-white/10 backdrop-blur-sm border border-white/20"
-                        : "glass"
-                    }`}>
+                    <div
+                      className={`rounded-xl px-4 py-3 flex items-center gap-3 text-xs ${
+                        isExpanded
+                          ? "bg-white/10 backdrop-blur-sm border border-white/20"
+                          : "glass"
+                      }`}
+                    >
                       <span className="flex items-center gap-2 text-red-400">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                         Video Preview
@@ -1021,12 +1072,16 @@ export default function GaussianViewer({
               </AnimatePresence>
 
               {/* Bottom right Scene/Video toggle */}
-              <div className={`absolute z-20 ${isExpanded ? "bottom-6 right-6" : "bottom-4 right-4"}`}>
-                <div className={`rounded-xl p-1 flex items-center gap-1 ${
-                  isExpanded
-                    ? "bg-white/10 backdrop-blur-sm border border-white/20"
-                    : "glass"
-                }`}>
+              <div
+                className={`absolute z-20 ${isExpanded ? "bottom-6 right-6" : "bottom-4 right-4"}`}
+              >
+                <div
+                  className={`rounded-xl p-1 flex items-center gap-1 ${
+                    isExpanded
+                      ? "bg-white/10 backdrop-blur-sm border border-white/20"
+                      : "glass"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => setViewMode("scene")}

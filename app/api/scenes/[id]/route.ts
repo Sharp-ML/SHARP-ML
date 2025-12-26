@@ -5,16 +5,13 @@ import { prisma } from "@/lib/prisma";
 // GET /api/scenes/[id] - Get a specific scene with ownership verification
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -34,18 +31,12 @@ export async function GET(
     });
 
     if (!scene) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     // Verify ownership - don't reveal scene exists to unauthorized users
     if (scene.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     // Return scene without userId
@@ -55,7 +46,7 @@ export async function GET(
     console.error("Error fetching scene:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -63,16 +54,13 @@ export async function GET(
 // DELETE /api/scenes/[id] - Delete a specific scene
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -84,18 +72,12 @@ export async function DELETE(
     });
 
     if (!scene) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     if (scene.userId !== session.user.id) {
       // Don't reveal whether the scene exists to unauthorized users
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     await prisma.scene.delete({
@@ -107,7 +89,7 @@ export async function DELETE(
     console.error("Error deleting scene:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -115,26 +97,20 @@ export async function DELETE(
 // PATCH /api/scenes/[id] - Update scene name
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
     const { name } = await request.json();
 
     if (!name || typeof name !== "string") {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     // Verify the scene belongs to this user before updating
@@ -144,17 +120,11 @@ export async function PATCH(
     });
 
     if (!scene) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     if (scene.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Scene not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
     const updatedScene = await prisma.scene.update({
@@ -175,7 +145,7 @@ export async function PATCH(
     console.error("Error updating scene:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

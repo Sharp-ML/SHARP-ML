@@ -11,18 +11,66 @@ const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 // Short chip labels for UI display, with full prompts for generation (naturalistic aesthetic)
 const PROMPT_CHIPS = [
-  { label: "Barbie dollhouse", prompt: "A tiny Barbie dreamhouse diorama with pastel pink walls, miniature velvet furniture, soft window light falling across the rooms, handcrafted dollhouse scale" },
-  { label: "Santa's sleigh", prompt: "Santa's sleigh flying through a quiet snowy night, soft moonlight on fresh snow, paper craft style aurora in pale greens, felt reindeer, peaceful winter stillness" },
-  { label: "F1 Monaco", prompt: "A vintage Formula 1 car on Monaco's harbor circuit, Mediterranean afternoon light, muted teal water in the marina, warm asphalt tones, 1970s racing photography feel" },
-  { label: "Zen garden", prompt: "A Japanese zen garden in soft morning light, raked sand patterns, weathered stones with moss, a small maple tree with faded red leaves, tranquil and minimal" },
-  { label: "Pirate battle", prompt: "Two wooden sailing ships in rough seas, overcast stormy light, tattered canvas sails, sea spray and mist, muted grays and browns like an old maritime painting" },
-  { label: "Hobbit hole", prompt: "A cozy hobbit hole built into a grassy hillside, round wooden door, warm lamplight in small windows, overgrown garden with wildflowers, quiet evening atmosphere" },
-  { label: "Cyberpunk market", prompt: "A narrow night market alley with rain-wet streets, soft neon signs in pink and blue, steam from food stalls, umbrellas and puddles, moody urban atmosphere" },
-  { label: "Dragon's cave", prompt: "A dragon's treasure hoard in a dim cavern, scattered gold coins and old artifacts, a shaft of daylight from above, dust floating in the air, warm earth tones" },
-  { label: "Fairy forest", prompt: "A quiet forest clearing at dusk, tiny glowing mushrooms, fireflies as small points of light, old mossy trees, soft mist low to the ground, muted greens and blues" },
-  { label: "Retro arcade", prompt: "A 1980s arcade with rows of cabinet games, warm tungsten lighting mixed with soft screen glow, worn carpet, vintage posters, nostalgic and slightly faded" },
-  { label: "Tropical island", prompt: "A small tropical beach with clear shallow water, a wooden dock, palm trees swaying gently, soft afternoon light, peaceful and uncrowded, natural muted colors" },
-  { label: "Steampunk airship", prompt: "A brass and wood airship floating through clouds, soft diffused daylight, patina on metal surfaces, canvas balloon, Victorian details, like an antique photograph" },
+  {
+    label: "Barbie dollhouse",
+    prompt:
+      "A tiny Barbie dreamhouse diorama with pastel pink walls, miniature velvet furniture, soft window light falling across the rooms, handcrafted dollhouse scale",
+  },
+  {
+    label: "Santa's sleigh",
+    prompt:
+      "Santa's sleigh flying through a quiet snowy night, soft moonlight on fresh snow, paper craft style aurora in pale greens, felt reindeer, peaceful winter stillness",
+  },
+  {
+    label: "F1 Monaco",
+    prompt:
+      "A vintage Formula 1 car on Monaco's harbor circuit, Mediterranean afternoon light, muted teal water in the marina, warm asphalt tones, 1970s racing photography feel",
+  },
+  {
+    label: "Zen garden",
+    prompt:
+      "A Japanese zen garden in soft morning light, raked sand patterns, weathered stones with moss, a small maple tree with faded red leaves, tranquil and minimal",
+  },
+  {
+    label: "Pirate battle",
+    prompt:
+      "Two wooden sailing ships in rough seas, overcast stormy light, tattered canvas sails, sea spray and mist, muted grays and browns like an old maritime painting",
+  },
+  {
+    label: "Hobbit hole",
+    prompt:
+      "A cozy hobbit hole built into a grassy hillside, round wooden door, warm lamplight in small windows, overgrown garden with wildflowers, quiet evening atmosphere",
+  },
+  {
+    label: "Cyberpunk market",
+    prompt:
+      "A narrow night market alley with rain-wet streets, soft neon signs in pink and blue, steam from food stalls, umbrellas and puddles, moody urban atmosphere",
+  },
+  {
+    label: "Dragon's cave",
+    prompt:
+      "A dragon's treasure hoard in a dim cavern, scattered gold coins and old artifacts, a shaft of daylight from above, dust floating in the air, warm earth tones",
+  },
+  {
+    label: "Fairy forest",
+    prompt:
+      "A quiet forest clearing at dusk, tiny glowing mushrooms, fireflies as small points of light, old mossy trees, soft mist low to the ground, muted greens and blues",
+  },
+  {
+    label: "Retro arcade",
+    prompt:
+      "A 1980s arcade with rows of cabinet games, warm tungsten lighting mixed with soft screen glow, worn carpet, vintage posters, nostalgic and slightly faded",
+  },
+  {
+    label: "Tropical island",
+    prompt:
+      "A small tropical beach with clear shallow water, a wooden dock, palm trees swaying gently, soft afternoon light, peaceful and uncrowded, natural muted colors",
+  },
+  {
+    label: "Steampunk airship",
+    prompt:
+      "A brass and wood airship floating through clouds, soft diffused daylight, patina on metal surfaces, canvas balloon, Victorian details, like an antique photograph",
+  },
 ];
 
 interface AttachedImage {
@@ -58,36 +106,42 @@ export default function PromptInput({
     return shuffled.slice(0, 6);
   }, []);
 
-  const validateAndAddFile = useCallback((file: File) => {
-    // Validate file type
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      onError?.("Invalid file type. Please use PNG, JPG, or WEBP.");
-      return;
-    }
+  const validateAndAddFile = useCallback(
+    (file: File) => {
+      // Validate file type
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        onError?.("Invalid file type. Please use PNG, JPG, or WEBP.");
+        return;
+      }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      onError?.(`File too large (${sizeMB}MB). Maximum size is 4.5MB.`);
-      return;
-    }
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        onError?.(`File too large (${sizeMB}MB). Maximum size is 4.5MB.`);
+        return;
+      }
 
-    // Create preview URL and add to state
-    const previewUrl = URL.createObjectURL(file);
-    const newImage: AttachedImage = {
-      file,
-      previewUrl,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    };
-    setAttachedImages((prev) => [...prev, newImage]);
-  }, [onError]);
+      // Create preview URL and add to state
+      const previewUrl = URL.createObjectURL(file);
+      const newImage: AttachedImage = {
+        file,
+        previewUrl,
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      };
+      setAttachedImages((prev) => [...prev, newImage]);
+    },
+    [onError],
+  );
 
-  const handleFileSelect = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    // Only take the first file for now (can be extended for multiple)
-    validateAndAddFile(files[0]);
-  }, [validateAndAddFile]);
+  const handleFileSelect = useCallback(
+    (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+
+      // Only take the first file for now (can be extended for multiple)
+      validateAndAddFile(files[0]);
+    },
+    [validateAndAddFile],
+  );
 
   const handleRemoveImage = useCallback((id: string) => {
     setAttachedImages((prev) => {
@@ -125,7 +179,7 @@ export default function PromptInput({
     }
   };
 
-  const handleChipClick = (chip: typeof PROMPT_CHIPS[0]) => {
+  const handleChipClick = (chip: (typeof PROMPT_CHIPS)[0]) => {
     // Always allow selecting a chip to fill the prompt field
     setPrompt(chip.prompt);
   };
@@ -141,7 +195,7 @@ export default function PromptInput({
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Check if dragging files
     if (e.dataTransfer.types.includes("Files")) {
       setIsDragOver(true);
@@ -154,16 +208,19 @@ export default function PromptInput({
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files);
-    }
-  }, [handleFileSelect]);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelect(files);
+      }
+    },
+    [handleFileSelect],
+  );
 
   const handlePaperclipClick = () => {
     fileInputRef.current?.click();
@@ -181,10 +238,10 @@ export default function PromptInput({
       <div className="min-h-[265.5px] flex flex-col">
         <div className="flex flex-col gap-4 my-auto">
           {/* Textarea with attachment and submit buttons */}
-          <div 
+          <div
             className={`relative w-full rounded-xl border bg-[var(--surface)] transition-all duration-200 ${
-              isDragOver 
-                ? "border-[var(--foreground)]/40 border-dashed ring-2 ring-[var(--foreground)]/20" 
+              isDragOver
+                ? "border-[var(--foreground)]/40 border-dashed ring-2 ring-[var(--foreground)]/20"
                 : "border-[var(--border)]"
             }`}
             onDragOver={handleDragOver}
@@ -204,8 +261,12 @@ export default function PromptInput({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={attachedImages.length > 0 ? "Add a prompt or submit to process image..." : "Describe your 3D scene..."}
-              style={{ scrollPaddingBlock: '1rem' }}
+              placeholder={
+                attachedImages.length > 0
+                  ? "Add a prompt or submit to process image..."
+                  : "Describe your 3D scene..."
+              }
+              style={{ scrollPaddingBlock: "1rem" }}
               className="w-full h-32 px-4 py-4 pr-24 bg-transparent text-[var(--foreground)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none text-base overflow-y-auto box-border border-none"
             />
 
@@ -213,10 +274,7 @@ export default function PromptInput({
             {attachedImages.length > 0 && (
               <div className="flex flex-wrap gap-2 px-4 pb-4">
                 {attachedImages.map((image) => (
-                  <div
-                    key={image.id}
-                    className="relative group"
-                  >
+                  <div key={image.id} className="relative group">
                     {/* Thumbnail - no border */}
                     <button
                       onClick={() => setModalImage(image.previewUrl)}
@@ -300,9 +358,9 @@ export default function PromptInput({
                 key={chip.label}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ 
+                transition={{
                   delay: index * 0.01,
-                  duration: 0.2
+                  duration: 0.2,
                 }}
                 onClick={() => handleChipClick(chip)}
                 className="px-3 py-1.5 text-xs rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--warm-tint)] hover:text-[var(--foreground)] transition-all whitespace-nowrap"
@@ -340,7 +398,7 @@ export default function PromptInput({
                 className="object-contain max-w-[90vw] max-h-[90vh]"
                 unoptimized
               />
-              
+
               {/* Close button */}
               <button
                 onClick={() => setModalImage(null)}

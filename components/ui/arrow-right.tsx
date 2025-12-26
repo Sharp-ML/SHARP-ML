@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface ArrowRightIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -17,7 +17,7 @@ const ARROW_VARIANTS: Variants = {
   animate: {
     x: 3,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 200,
       damping: 10,
       mass: 1,
@@ -25,36 +25,36 @@ const ARROW_VARIANTS: Variants = {
   },
 };
 
-function ArrowRightIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function ArrowRightIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: ArrowRightIconProps) {
   const controls = useAnimation();
 
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        controls.start('animate');
+        controls.start("animate");
       } else {
-        controls.start('normal');
+        controls.start("normal");
       }
     }
   }, [isAnimating, controls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -86,6 +86,6 @@ function ArrowRightIcon({
   );
 }
 
-ArrowRightIcon.displayName = 'ArrowRightIcon';
+ArrowRightIcon.displayName = "ArrowRightIcon";
 
 export { ArrowRightIcon };

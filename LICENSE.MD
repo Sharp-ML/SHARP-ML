@@ -1,9 +1,9 @@
 Copyright (C) 2025 Apple Inc. All Rights Reserved.
 
-Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
+Disclaimer: IMPORTANT: This Apple software is supplied to you by Apple
 Inc. ("Apple") in consideration of your agreement to the following
 terms, and your use, installation, modification or redistribution of
-this Apple software constitutes acceptance of these terms.  If you do
+this Apple software constitutes acceptance of these terms. If you do
 not agree with these terms, please do not use, install, modify or
 redistribute this Apple software.
 
@@ -17,13 +17,13 @@ without modifications, you must retain this notice and the following
 text and disclaimers in all such redistributions of the Apple Software.
 Neither the name, trademarks, service marks or logos of Apple Inc. may
 be used to endorse or promote products derived from the Apple Software
-without specific prior written permission from Apple.  Except as
+without specific prior written permission from Apple. Except as
 expressly stated in this notice, no other rights or licenses, express or
 implied, are granted by Apple herein, including but not limited to any
 patent rights that may be infringed by your derivative works or by other
 works in which the Apple Software may be incorporated.
 
-The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
+The Apple Software is provided by Apple on an "AS IS" basis. APPLE
 MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
 THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
 FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
@@ -38,10 +38,11 @@ AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
 STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+---
 
--------------------------------------------------------------------------------
 SOFTWARE DISTRIBUTED IN THIS REPOSITORY:
 
 This software includes a number of subcomponents with separate
 copyright notices and license terms - please see the file ACKNOWLEDGEMENTS.
--------------------------------------------------------------------------------
+
+---
