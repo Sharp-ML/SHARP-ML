@@ -1034,10 +1034,10 @@ export default function GaussianViewer({
                       viewMode === "scene"
                         ? isExpanded
                           ? "bg-white text-black"
-                          : "bg-[var(--accent)] text-white"
+                          : "bg-[var(--accent)] text-[var(--background)]"
                         : isExpanded
                           ? "text-white/60 hover:text-white hover:bg-white/10"
-                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/5"
                     }`}
                   >
                     <Box className="w-3.5 h-3.5" />
@@ -1050,10 +1050,10 @@ export default function GaussianViewer({
                       viewMode === "video"
                         ? isExpanded
                           ? "bg-white text-black"
-                          : "bg-[var(--accent)] text-white"
+                          : "bg-[var(--accent)] text-[var(--background)]"
                         : isExpanded
                           ? "text-white/60 hover:text-white hover:bg-white/10"
-                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+                          : "text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/5"
                     }`}
                   >
                     <Video className="w-3.5 h-3.5" />
