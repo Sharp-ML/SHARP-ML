@@ -50,7 +50,21 @@ export default function GaussianViewer({
   const [errorInternal, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("scene");
-  const videoAnimationRef = useRef<{ startTime: number; active: boolean }>({ startTime: 0, active: false });
+  const videoAnimationRef = useRef<{ 
+    startTime: number; 
+    active: boolean;
+    lastFrameTime: number;
+    initialCameraPos: THREE.Vector3 | null;
+    initialTargetPos: THREE.Vector3 | null;
+    totalDistance: number;
+  }>({ 
+    startTime: 0, 
+    active: false, 
+    lastFrameTime: 0,
+    initialCameraPos: null,
+    initialTargetPos: null,
+    totalDistance: 0
+  });
   const keysPressed = useRef<Set<string>>(new Set());
 
   // Debug overrides
@@ -209,45 +223,37 @@ export default function GaussianViewer({
           
           // Check if we're in video mode (not applicable in mini mode)
           if (videoAnimationRef.current.active && !mini) {
-            const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
-
-            // Controlled camera movement optimized to showcase 3D depth effects
-            // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
+            const now = Date.now();
+            const deltaTime = (now - videoAnimationRef.current.lastFrameTime) / 1000;
+            videoAnimationRef.current.lastFrameTime = now;
             
-            // Phase 1: Slow, controlled speed for smooth cinematic feel
-            const primarySpeed = 0.12; // Main rotation speed
-            const secondarySpeed = 0.09; // Secondary movement for figure-8
-            const dollySpeed = 0.15; // Forward/backward movement speed
+            // Cap delta time to prevent huge jumps
+            const dt = Math.min(deltaTime, 0.1);
             
-            // Keep camera close and focused for maximum parallax effect
-            const baseDistance = 1.2; // Close to subject for depth emphasis
-            const orbitRadius = 0.3; // Tight horizontal movement
-            const verticalRange = 0.15; // Subtle vertical movement
-            const dollyRange = 0.25; // Forward/backward dolly for depth
+            // Smooth scroll zoom - same as manual scroll but automated
+            // Move both camera and target forward along camera's direction
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
             
-            // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
-            // The 2x frequency on one axis creates the figure-8 pattern
-            const t = elapsed * primarySpeed;
-            const t2 = elapsed * secondarySpeed;
+            // Smooth constant speed forward movement (units per second)
+            const speed = 0.5;
+            const moveAmount = speed * dt;
             
-            // Lemniscate parametric equations, scaled and smoothed
-            const lemniscateX = Math.sin(t) * orbitRadius;
-            const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+            camera.position.addScaledVector(forward, moveAmount);
+            controls.target.addScaledVector(forward, moveAmount);
             
-            // Dolly movement (forward/backward) to emphasize depth parallax
-            // This is the key to showing off 3D - moving through the scene
-            const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+            // Track distance and loop after traveling through the scene
+            videoAnimationRef.current.totalDistance += moveAmount;
+            const loopDistance = 8.0; // Distance before looping back
             
-            // Gentle vertical drift to add dimensionality
-            const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
-            
-            // Compose final camera position
-            const x = lemniscateX;
-            const y = verticalOffset;
-            const z = -baseDistance + lemniscateZ + dollyOffset;
-
-            camera.position.set(x, y, z);
-            camera.lookAt(0, 0, 0);
+            if (videoAnimationRef.current.totalDistance >= loopDistance && 
+                videoAnimationRef.current.initialCameraPos && 
+                videoAnimationRef.current.initialTargetPos) {
+              // Reset to initial positions
+              camera.position.copy(videoAnimationRef.current.initialCameraPos);
+              controls.target.copy(videoAnimationRef.current.initialTargetPos);
+              videoAnimationRef.current.totalDistance = 0;
+            }
 
             controls.enabled = false;
           } else if (!mini) {
@@ -477,46 +483,37 @@ export default function GaussianViewer({
         
         // Check if we're in video mode (not applicable in mini mode)
         if (videoAnimationRef.current.active && !mini) {
-          const elapsed = (Date.now() - videoAnimationRef.current.startTime) / 1000;
-
-          // Controlled camera movement optimized to showcase 3D depth effects
-          // Uses a tight figure-8 (lemniscate) path with dolly movements for parallax
+          const now = Date.now();
+          const deltaTime = (now - videoAnimationRef.current.lastFrameTime) / 1000;
+          videoAnimationRef.current.lastFrameTime = now;
           
-          // Phase 1: Slow, controlled speed for smooth cinematic feel
-          const primarySpeed = 0.12; // Main rotation speed
-          const secondarySpeed = 0.09; // Secondary movement for figure-8
-          const dollySpeed = 0.15; // Forward/backward movement speed
+          // Cap delta time to prevent huge jumps
+          const dt = Math.min(deltaTime, 0.1);
           
-          // Keep camera close and focused for maximum parallax effect
-          const baseDistance = 1.6; // Distance from center (slightly further for GLB models)
-          const baseHeight = 0.6; // Slightly elevated viewpoint
-          const orbitRadius = 0.35; // Tight horizontal movement
-          const verticalRange = 0.2; // Subtle vertical movement
-          const dollyRange = 0.3; // Forward/backward dolly for depth
+          // Smooth scroll zoom - same as manual scroll but automated
+          // Move both camera and target forward along camera's direction
+          const forward = new THREE.Vector3();
+          camera.getWorldDirection(forward);
           
-          // Figure-8 (lemniscate) path creates dynamic parallax while staying controlled
-          // The 2x frequency on one axis creates the figure-8 pattern
-          const t = elapsed * primarySpeed;
-          const t2 = elapsed * secondarySpeed;
+          // Smooth constant speed forward movement (units per second)
+          const speed = 0.5;
+          const moveAmount = speed * dt;
           
-          // Lemniscate parametric equations, scaled and smoothed
-          const lemniscateX = Math.sin(t) * orbitRadius;
-          const lemniscateZ = Math.sin(t) * Math.cos(t) * orbitRadius * 0.6;
+          camera.position.addScaledVector(forward, moveAmount);
+          controls.target.addScaledVector(forward, moveAmount);
           
-          // Dolly movement (forward/backward) to emphasize depth parallax
-          // This is the key to showing off 3D - moving through the scene
-          const dollyOffset = Math.sin(elapsed * dollySpeed) * dollyRange;
+          // Track distance and loop after traveling through the scene
+          videoAnimationRef.current.totalDistance += moveAmount;
+          const loopDistance = 8.0; // Distance before looping back
           
-          // Gentle vertical drift to add dimensionality
-          const verticalOffset = Math.sin(t2 * 1.3) * verticalRange;
-          
-          // Compose final camera position
-          const x = lemniscateX;
-          const y = baseHeight + verticalOffset;
-          const z = baseDistance + lemniscateZ + dollyOffset;
-
-          camera.position.set(x, y, z);
-          camera.lookAt(0, 0, 0);
+          if (videoAnimationRef.current.totalDistance >= loopDistance && 
+              videoAnimationRef.current.initialCameraPos && 
+              videoAnimationRef.current.initialTargetPos) {
+            // Reset to initial positions
+            camera.position.copy(videoAnimationRef.current.initialCameraPos);
+            controls.target.copy(videoAnimationRef.current.initialTargetPos);
+            videoAnimationRef.current.totalDistance = 0;
+          }
 
           // Disable controls in video mode
           controls.enabled = false;
@@ -728,7 +725,24 @@ export default function GaussianViewer({
   // Handle view mode changes
   useEffect(() => {
     if (viewMode === "video") {
-      videoAnimationRef.current = { startTime: Date.now(), active: true };
+      // Get current camera and target positions to store as initial state
+      const viewer = viewerRef.current as { 
+        camera?: THREE.PerspectiveCamera; 
+        controls?: OrbitControls;
+      } | null;
+      
+      const initialCameraPos = viewer?.camera?.position.clone() || null;
+      const initialTargetPos = viewer?.controls?.target.clone() || null;
+      
+      videoAnimationRef.current = { 
+        startTime: Date.now(), 
+        active: true,
+        lastFrameTime: Date.now(),
+        initialCameraPos,
+        initialTargetPos,
+        totalDistance: 0
+      };
+      
       // Disable controls when in video mode and reset target to center
       if (controlsRef.current) {
         controlsRef.current.enabled = false;
@@ -736,7 +750,14 @@ export default function GaussianViewer({
         controlsRef.current.update();
       }
     } else {
-      videoAnimationRef.current = { startTime: 0, active: false };
+      videoAnimationRef.current = { 
+        startTime: 0, 
+        active: false,
+        lastFrameTime: 0,
+        initialCameraPos: null,
+        initialTargetPos: null,
+        totalDistance: 0
+      };
       // Re-enable controls when in scene mode
       if (controlsRef.current) {
         controlsRef.current.enabled = true;
@@ -809,12 +830,10 @@ export default function GaussianViewer({
                 : "relative w-full aspect-[16/10]"
           }`}
         >
-          {/* Viewer container - scales up in video mode to crop edge artifacts */}
+          {/* Viewer container */}
           <div
             ref={containerRef}
-            className={`absolute inset-0 transition-transform duration-500 ${
-              viewMode === "video" && !mini ? "scale-[2.5]" : "scale-100"
-            }`}
+            className="absolute inset-0"
           />
 
           {/* Loading overlay - hidden in mini mode and when regenerating (keep scene visible) */}
