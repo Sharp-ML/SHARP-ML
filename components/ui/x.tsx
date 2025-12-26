@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface XIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -13,7 +13,7 @@ interface XIconProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const PATH_VARIANTS: Variants = {
-  normal: { 
+  normal: {
     rotate: 0,
     scale: 1,
   },
@@ -21,43 +21,43 @@ const PATH_VARIANTS: Variants = {
     rotate: 90,
     scale: [1, 1.1, 1],
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 200,
       damping: 15,
     },
   },
 };
 
-function XIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function XIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: XIconProps) {
   const controls = useAnimation();
 
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        controls.start('animate');
+        controls.start("animate");
       } else {
-        controls.start('normal');
+        controls.start("normal");
       }
     }
   }, [isAnimating, controls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -90,6 +90,6 @@ function XIcon({
   );
 }
 
-XIcon.displayName = 'XIcon';
+XIcon.displayName = "XIcon";
 
 export { XIcon };

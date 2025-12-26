@@ -44,10 +44,18 @@ export default function PixelatedImage({
     canvas.height = sampleSize;
     ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
 
-    const getAverageColor = (x: number, y: number, width: number, height: number) => {
+    const getAverageColor = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => {
       const imageData = ctx.getImageData(x, y, width, height);
       const data = imageData.data;
-      let r = 0, g = 0, b = 0, count = 0;
+      let r = 0,
+        g = 0,
+        b = 0,
+        count = 0;
 
       for (let i = 0; i < data.length; i += 4) {
         r += data[i];
@@ -155,16 +163,16 @@ export default function PixelatedImage({
   }, [src]);
 
   const showOriginal = currentLevel >= PIXEL_LEVELS.length;
-  
+
   // Get the current image to display - use the highest available level up to currentLevel
-  const displayImage = pixelatedImages[Math.min(currentLevel, pixelatedImages.length - 1)];
+  const displayImage =
+    pixelatedImages[Math.min(currentLevel, pixelatedImages.length - 1)];
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {/* Hidden canvases for processing */}
       <canvas ref={canvasRef} className="hidden" />
       <canvas ref={colorCanvasRef} className="hidden" />
-
 
       {/* Current pixelated level - always show if available */}
       {displayImage && !showOriginal && (
@@ -188,37 +196,33 @@ export default function PixelatedImage({
         }`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          className="w-full h-full object-cover"
-        />
+        <img src={src} alt={alt} className="w-full h-full object-cover" />
       </div>
 
       {/* Gradient blur edges */}
       {edgeColors && (
         <>
-          <div 
+          <div
             className="absolute inset-x-0 top-0 h-8 pointer-events-none"
-            style={{ 
+            style={{
               background: `linear-gradient(to bottom, ${edgeColors.top}, transparent)`,
             }}
           />
-          <div 
+          <div
             className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
-            style={{ 
+            style={{
               background: `linear-gradient(to top, ${edgeColors.bottom}, transparent)`,
             }}
           />
-          <div 
+          <div
             className="absolute inset-y-0 left-0 w-8 pointer-events-none"
-            style={{ 
+            style={{
               background: `linear-gradient(to right, ${edgeColors.left}, transparent)`,
             }}
           />
-          <div 
+          <div
             className="absolute inset-y-0 right-0 w-8 pointer-events-none"
-            style={{ 
+            style={{
               background: `linear-gradient(to left, ${edgeColors.right}, transparent)`,
             }}
           />

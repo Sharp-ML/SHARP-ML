@@ -30,14 +30,18 @@ interface Stage {
 // Get stages based on mode
 function getStages(mode: "upload" | "prompt"): Stage[] {
   const isPrompt = mode === "prompt";
-  
+
   return [
     {
       id: "uploading",
       label: isPrompt ? "Generating Image" : "Uploading Image",
       labelComplete: isPrompt ? "Generated" : "Uploaded",
-      description: isPrompt ? "Creating image from your prompt" : "Transferring your image to the server",
-      descriptionComplete: isPrompt ? "Image generated from prompt" : "Image transferred to server",
+      description: isPrompt
+        ? "Creating image from your prompt"
+        : "Transferring your image to the server",
+      descriptionComplete: isPrompt
+        ? "Image generated from prompt"
+        : "Image transferred to server",
       estimatedSeconds: isPrompt ? 8 : 5,
       showTimeEstimate: false, // Don't show time for this quick initial stage
     },
@@ -72,13 +76,13 @@ function getStages(mode: "upload" | "prompt"): Stage[] {
 }
 
 // Get icon for current stage
-function StageIcon({ 
-  stageId, 
-  isComplete, 
+function StageIcon({
+  stageId,
+  isComplete,
   isAnimating,
   className = "",
-}: { 
-  stageId: StageId; 
+}: {
+  stageId: StageId;
   isComplete: boolean;
   isAnimating: boolean;
   className?: string;
@@ -97,13 +101,37 @@ function StageIcon({
 
   switch (stageId) {
     case "uploading":
-      return <ImageIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+      return (
+        <ImageIcon
+          size={20}
+          className={iconClassName}
+          isAnimating={isAnimating}
+        />
+      );
     case "processing":
-      return <CpuIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+      return (
+        <CpuIcon
+          size={20}
+          className={iconClassName}
+          isAnimating={isAnimating}
+        />
+      );
     case "generating":
-      return <SparklesIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+      return (
+        <SparklesIcon
+          size={20}
+          className={iconClassName}
+          isAnimating={isAnimating}
+        />
+      );
     case "complete":
-      return <CircleCheckIcon size={20} className={iconClassName} isAnimating={isAnimating} />;
+      return (
+        <CircleCheckIcon
+          size={20}
+          className={iconClassName}
+          isAnimating={isAnimating}
+        />
+      );
     default:
       return null;
   }
@@ -125,19 +153,27 @@ export default function ProcessingStatus({
   const getTimeRemaining = () => {
     if (isComplete) return null;
     if (!currentStage.showTimeEstimate) return null;
-    
+
     // Use stageProgress if available (for the processing stage)
     if (stageProgress !== undefined && stageProgress > 0) {
-      const remaining = Math.max(1, Math.round((100 - stageProgress) / 100 * currentStage.estimatedSeconds));
+      const remaining = Math.max(
+        1,
+        Math.round(
+          ((100 - stageProgress) / 100) * currentStage.estimatedSeconds,
+        ),
+      );
       return remaining;
     }
-    
+
     // Otherwise estimate based on overall progress for processing stage
     if (status === "processing") {
-      const remaining = Math.max(1, Math.round((100 - progress) / 100 * currentStage.estimatedSeconds));
+      const remaining = Math.max(
+        1,
+        Math.round(((100 - progress) / 100) * currentStage.estimatedSeconds),
+      );
       return remaining;
     }
-    
+
     return null;
   };
 
@@ -152,10 +188,15 @@ export default function ProcessingStatus({
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-[var(--error)]/10 border border-[var(--error)]/20 flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="w-5 h-5 text-[var(--error)]" strokeWidth={1.5} />
+            <AlertCircle
+              className="w-5 h-5 text-[var(--error)]"
+              strokeWidth={1.5}
+            />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[var(--error)]">Processing Failed</h3>
+            <h3 className="font-semibold text-[var(--error)]">
+              Processing Failed
+            </h3>
             <p className="text-sm text-[var(--text-muted)]">
               {errorMessage || "Something went wrong. Please try again."}
             </p>
@@ -166,9 +207,10 @@ export default function ProcessingStatus({
   }
 
   // Calculate the effective progress (use stageProgress for more granular updates during processing)
-  const effectiveProgress = stageProgress !== undefined && status === "processing"
-    ? Math.round(20 + (stageProgress / 100) * 60) // Processing stage is roughly 20-80% of total
-    : progress;
+  const effectiveProgress =
+    stageProgress !== undefined && status === "processing"
+      ? Math.round(20 + (stageProgress / 100) * 60) // Processing stage is roughly 20-80% of total
+      : progress;
 
   return (
     <motion.div
@@ -197,7 +239,9 @@ export default function ProcessingStatus({
         <div className="flex-1 min-w-0">
           {/* Label row */}
           <div className="flex items-center justify-between mb-1.5">
-            <span className={`text-sm font-medium ${isComplete ? "text-[var(--success)]" : "text-[var(--foreground)]"}`}>
+            <span
+              className={`text-sm font-medium ${isComplete ? "text-[var(--success)]" : "text-[var(--foreground)]"}`}
+            >
               {isComplete ? currentStage.labelComplete : currentStage.label}
             </span>
             <span className="text-sm text-[var(--text-muted)] tabular-nums">
@@ -218,7 +262,9 @@ export default function ProcessingStatus({
           {/* Description and time estimate */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-[var(--text-muted)] truncate">
-              {isComplete ? currentStage.descriptionComplete : currentStage.description}
+              {isComplete
+                ? currentStage.descriptionComplete
+                : currentStage.description}
             </p>
             {timeRemaining !== null && (
               <span className="text-xs text-[var(--text-muted)] tabular-nums flex-shrink-0 ml-2">

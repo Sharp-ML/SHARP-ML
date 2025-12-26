@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface CpuIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -22,7 +22,7 @@ const Y_VARIANTS: Variants = {
     opacity: [1, 0.8, 1],
     transition: {
       duration: 0.6,
-      ease: 'easeInOut',
+      ease: "easeInOut",
       repeat: Infinity,
       repeatDelay: 0.2,
     },
@@ -39,43 +39,43 @@ const X_VARIANTS: Variants = {
     opacity: [1, 0.8, 1],
     transition: {
       duration: 0.6,
-      ease: 'easeInOut',
+      ease: "easeInOut",
       repeat: Infinity,
       repeatDelay: 0.2,
     },
   },
 };
 
-function CpuIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function CpuIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: CpuIconProps) {
   const controls = useAnimation();
 
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        controls.start('animate');
+        controls.start("animate");
       } else {
-        controls.start('normal');
+        controls.start("normal");
       }
     }
   }, [isAnimating, controls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -153,6 +153,6 @@ function CpuIcon({
   );
 }
 
-CpuIcon.displayName = 'CpuIcon';
+CpuIcon.displayName = "CpuIcon";
 
 export { CpuIcon };

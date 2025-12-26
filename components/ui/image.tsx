@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface ImageIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -21,7 +21,7 @@ const FRAME_VARIANTS: Variants = {
     transition: {
       duration: 0.8,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
@@ -37,7 +37,7 @@ const SUN_VARIANTS: Variants = {
     transition: {
       duration: 1,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
@@ -51,41 +51,41 @@ const MOUNTAIN_VARIANTS: Variants = {
     transition: {
       duration: 1.2,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
 
-function ImageIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function ImageIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: ImageIconProps) {
   const controls = useAnimation();
 
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        controls.start('animate');
+        controls.start("animate");
       } else {
-        controls.start('normal');
+        controls.start("normal");
       }
     }
   }, [isAnimating, controls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -138,6 +138,6 @@ function ImageIcon({
   );
 }
 
-ImageIcon.displayName = 'ImageIcon';
+ImageIcon.displayName = "ImageIcon";
 
 export { ImageIcon };

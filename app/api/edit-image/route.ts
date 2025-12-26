@@ -38,24 +38,27 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Authentication required", message: "Please sign in to continue" },
-        { status: 401 }
+        {
+          error: "Authentication required",
+          message: "Please sign in to continue",
+        },
+        { status: 401 },
       );
     }
 
     // Check for Gemini API key
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    
+
     if (!geminiApiKey) {
       return NextResponse.json(
         {
           error: "Server configuration error",
           message: "GEMINI_API_KEY is not configured.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -66,14 +69,14 @@ export async function POST(request: NextRequest) {
     if (!imageUrl || typeof imageUrl !== "string") {
       return NextResponse.json(
         { error: "Invalid request", message: "An image URL is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!editPrompt || typeof editPrompt !== "string" || !editPrompt.trim()) {
       return NextResponse.json(
         { error: "Invalid request", message: "An edit prompt is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -82,19 +85,24 @@ export async function POST(request: NextRequest) {
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return NextResponse.json(
-        { error: "Failed to fetch image", message: "Could not retrieve the existing image" },
-        { status: 400 }
+        {
+          error: "Failed to fetch image",
+          message: "Could not retrieve the existing image",
+        },
+        { status: 400 },
       );
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
     const imageBase64 = Buffer.from(imageBuffer).toString("base64");
-    
+
     // Determine mime type from response or URL
-    const contentType = imageResponse.headers.get("content-type") || "image/png";
-    const mimeType = contentType.includes("jpeg") || contentType.includes("jpg") 
-      ? "image/jpeg" 
-      : "image/png";
+    const contentType =
+      imageResponse.headers.get("content-type") || "image/png";
+    const mimeType =
+      contentType.includes("jpeg") || contentType.includes("jpg")
+        ? "image/jpeg"
+        : "image/png";
 
     // Initialize Gemini client
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
@@ -107,18 +115,20 @@ export async function POST(request: NextRequest) {
     // Generate edited image using Gemini's multimodal capabilities
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
-      contents: [{ 
-        role: "user",
-        parts: [
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: imageBase64,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: imageBase64,
+              },
             },
-          },
-          { text: fullPrompt }
-        ]
-      }],
+            { text: fullPrompt },
+          ],
+        },
+      ],
       config: {
         responseModalities: ["image", "text"],
       },
@@ -130,7 +140,7 @@ export async function POST(request: NextRequest) {
       console.error("No content in Gemini response");
       return NextResponse.json(
         { error: "Image editing failed", message: "No image was generated" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -149,18 +159,21 @@ export async function POST(request: NextRequest) {
     if (!outputImageData) {
       console.error("No image data in Gemini response");
       return NextResponse.json(
-        { error: "Image editing failed", message: "No edited image data received" },
-        { status: 500 }
+        {
+          error: "Image editing failed",
+          message: "No edited image data received",
+        },
+        { status: 500 },
       );
     }
 
     // Convert base64 to buffer
     const outputBuffer = Buffer.from(outputImageData, "base64");
-    
+
     // Generate unique ID for this image
     const id = generateId();
     const ext = outputMimeType.includes("png") ? "png" : "jpg";
-    
+
     let outputUrl: string;
     const localDev = isLocalDev();
 
@@ -199,40 +212,41 @@ export async function POST(request: NextRequest) {
     // Handle specific Gemini errors
     if (errorMessage.includes("API key")) {
       return NextResponse.json(
-        { 
-          error: "Invalid API key", 
+        {
+          error: "Invalid API key",
           message: "The Gemini API key is invalid or expired.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (errorMessage.includes("quota") || errorMessage.includes("rate")) {
       return NextResponse.json(
-        { 
-          error: "Rate limit exceeded", 
+        {
+          error: "Rate limit exceeded",
           message: "Too many requests. Please try again in a moment.",
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
     if (errorMessage.includes("safety") || errorMessage.includes("blocked")) {
       return NextResponse.json(
-        { 
-          error: "Content blocked", 
-          message: "The prompt was blocked by safety filters. Please try a different prompt.",
+        {
+          error: "Content blocked",
+          message:
+            "The prompt was blocked by safety filters. Please try a different prompt.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
-      { 
-        error: "Image editing failed", 
+      {
+        error: "Image editing failed",
         message: errorMessage,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -13,11 +13,20 @@ interface FollowupInputProps {
 // Format seconds to "Xm Ys" or "Xs" with tabular-nums styling
 function FormattedTime({ seconds }: { seconds: number }) {
   if (seconds < 60) {
-    return <><span className="tabular-nums">{seconds}</span>s</>;
+    return (
+      <>
+        <span className="tabular-nums">{seconds}</span>s
+      </>
+    );
   }
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return <><span className="tabular-nums">{mins}</span>m <span className="tabular-nums">{secs}</span>s</>;
+  return (
+    <>
+      <span className="tabular-nums">{mins}</span>m{" "}
+      <span className="tabular-nums">{secs}</span>s
+    </>
+  );
 }
 
 export default function FollowupInput({
@@ -100,10 +109,13 @@ export default function FollowupInput({
         </button>
       </div>
       <p className="text-xs text-[var(--text-muted)] mt-2 px-1">
-        {isLoading 
-          ? <>Regenerating • <FormattedTime seconds={elapsedSeconds} /> elapsed</>
-          : "Describe changes to regenerate the 3D scene"
-        }
+        {isLoading ? (
+          <>
+            Regenerating • <FormattedTime seconds={elapsedSeconds} /> elapsed
+          </>
+        ) : (
+          "Describe changes to regenerate the 3D scene"
+        )}
       </p>
     </motion.div>
   );

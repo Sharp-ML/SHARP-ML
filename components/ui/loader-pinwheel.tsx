@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface LoaderPinwheelIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -19,41 +19,41 @@ const G_VARIANTS: Variants = {
     transition: {
       repeat: Infinity,
       duration: 1,
-      ease: 'linear',
+      ease: "linear",
     },
   },
 };
 
-function LoaderPinwheelIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function LoaderPinwheelIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: LoaderPinwheelIconProps) {
   const controls = useAnimation();
 
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        controls.start('animate');
+        controls.start("animate");
       } else {
-        controls.start('normal');
+        controls.start("normal");
       }
     }
   }, [isAnimating, controls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('animate');
+      controls.start("animate");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      controls.start('normal');
+      controls.start("normal");
     }
     onMouseLeave?.(e);
   };
@@ -76,11 +76,7 @@ function LoaderPinwheelIcon({
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <motion.g
-          variants={G_VARIANTS}
-          animate={controls}
-          initial="normal"
-        >
+        <motion.g variants={G_VARIANTS} animate={controls} initial="normal">
           <path d="M22 12a1 1 0 0 1-10 0 1 1 0 0 0-10 0" />
           <path d="M7 20.7a1 1 0 1 1 5-8.7 1 1 0 1 0 5-8.6" />
           <path d="M7 3.3a1 1 0 1 1 5 8.6 1 1 0 1 0 5 8.6" />
@@ -91,6 +87,6 @@ function LoaderPinwheelIcon({
   );
 }
 
-LoaderPinwheelIcon.displayName = 'LoaderPinwheelIcon';
+LoaderPinwheelIcon.displayName = "LoaderPinwheelIcon";
 
 export { LoaderPinwheelIcon };

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { Variants } from 'motion/react';
-import type { HTMLAttributes } from 'react';
-import { useEffect } from 'react';
-import { motion, useAnimation } from 'motion/react';
+import type { Variants } from "motion/react";
+import type { HTMLAttributes } from "react";
+import { useEffect } from "react";
+import { motion, useAnimation } from "motion/react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface SparklesIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
@@ -15,15 +15,15 @@ interface SparklesIconProps extends HTMLAttributes<HTMLDivElement> {
 const SPARKLE_VARIANTS: Variants = {
   initial: {
     y: 0,
-    fill: 'none',
+    fill: "none",
   },
   hover: {
     y: [0, -1, 0],
-    fill: ['none', 'currentColor', 'none'],
+    fill: ["none", "currentColor", "none"],
     transition: {
       duration: 1.2,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
@@ -37,18 +37,18 @@ const STAR_VARIANTS: Variants = {
     transition: {
       duration: 1.5,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
 
-function SparklesIcon({ 
-  onMouseEnter, 
-  onMouseLeave, 
-  className, 
-  size = 28, 
+function SparklesIcon({
+  onMouseEnter,
+  onMouseLeave,
+  className,
+  size = 28,
   isAnimating,
-  ...props 
+  ...props
 }: SparklesIconProps) {
   const starControls = useAnimation();
   const sparkleControls = useAnimation();
@@ -56,27 +56,27 @@ function SparklesIcon({
   useEffect(() => {
     if (isAnimating !== undefined) {
       if (isAnimating) {
-        sparkleControls.start('hover');
-        starControls.start('blink');
+        sparkleControls.start("hover");
+        starControls.start("blink");
       } else {
-        sparkleControls.start('initial');
-        starControls.start('initial');
+        sparkleControls.start("initial");
+        starControls.start("initial");
       }
     }
   }, [isAnimating, sparkleControls, starControls]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      sparkleControls.start('hover');
-      starControls.start('blink');
+      sparkleControls.start("hover");
+      starControls.start("blink");
     }
     onMouseEnter?.(e);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isAnimating === undefined) {
-      sparkleControls.start('initial');
-      starControls.start('initial');
+      sparkleControls.start("initial");
+      starControls.start("initial");
     }
     onMouseLeave?.(e);
   };
@@ -134,6 +134,6 @@ function SparklesIcon({
   );
 }
 
-SparklesIcon.displayName = 'SparklesIcon';
+SparklesIcon.displayName = "SparklesIcon";
 
 export { SparklesIcon };

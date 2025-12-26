@@ -26,7 +26,10 @@ export default function Error({
         >
           {/* Error Icon */}
           <div className="icon-box bg-[var(--error)]/10 border-[var(--error)]/20 mx-auto mb-6 w-16 h-16 rounded-2xl">
-            <AlertCircle className="w-8 h-8 text-[var(--error)]" strokeWidth={1.5} />
+            <AlertCircle
+              className="w-8 h-8 text-[var(--error)]"
+              strokeWidth={1.5}
+            />
           </div>
 
           {/* Error Message */}
@@ -34,7 +37,7 @@ export default function Error({
           <p className="text-[var(--text-muted)] mb-2">
             We encountered an unexpected error while processing your request.
           </p>
-          
+
           {/* Error Details */}
           {error.digest && (
             <p className="text-xs text-[var(--text-muted)] mb-6 font-mono">
@@ -71,7 +74,10 @@ export default function Error({
               <RefreshCw className="w-4 h-4" strokeWidth={2} />
               <span>Try Again</span>
             </button>
-            <a href="/" className="btn-secondary w-full sm:w-auto inline-flex items-center justify-center gap-2">
+            <a
+              href="/"
+              className="btn-secondary w-full sm:w-auto inline-flex items-center justify-center gap-2"
+            >
               <Home className="w-4 h-4" strokeWidth={2} />
               <span>Go Home</span>
             </a>

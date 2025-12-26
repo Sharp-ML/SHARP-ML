@@ -27,13 +27,17 @@ function DemoCard() {
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
           {/* Before/After Header */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm font-medium text-[var(--text-muted)]">2D Image</span>
+            <span className="text-sm font-medium text-[var(--text-muted)]">
+              2D Image
+            </span>
             <ArrowRight className="w-4 h-4 text-[var(--text-muted)]" />
-            <span className="text-sm font-medium text-[var(--primary)]">3D Scene</span>
+            <span className="text-sm font-medium text-[var(--primary)]">
+              3D Scene
+            </span>
           </div>
 
           {/* Image comparison container */}
-          <div 
+          <div
             className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-[var(--surface-elevated)]"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -77,7 +81,7 @@ function DemoCard() {
             </motion.div>
 
             {/* 2D/3D Label Chip - stays visible, only text changes */}
-            <div 
+            <div
               className={`absolute bottom-3 left-3 px-3 py-1.5 backdrop-blur-sm rounded-full z-10 overflow-hidden transition-colors duration-300 ${
                 isHovered ? "bg-[var(--primary)]/90" : "bg-black/60"
               }`}
@@ -147,9 +151,15 @@ export function AuthGate({ children }: AuthGateProps) {
           >
             <div className="text-center mb-8">
               <div className="icon-box bg-[var(--primary)]/10 border-[var(--primary)]/20 mx-auto mb-6">
-                <LayersIcon size={24} className="text-[var(--primary)]" isAnimating={true} />
+                <LayersIcon
+                  size={24}
+                  className="text-[var(--primary)]"
+                  isAnimating={true}
+                />
               </div>
-              <h1 className="text-2xl font-semibold mb-2">Welcome to Image to 3D</h1>
+              <h1 className="text-2xl font-semibold mb-2">
+                Welcome to Image to 3D
+              </h1>
               <p className="text-[var(--text-muted)]">
                 Sign in to transform your photos into interactive 3D scenes.
               </p>
@@ -182,18 +192,23 @@ export function AuthGate({ children }: AuthGateProps) {
               </button>
 
               <p className="text-xs text-[var(--text-muted)] text-center mt-4">
-                By signing in, you agree to our terms of service and privacy policy.
+                By signing in, you agree to our terms of service and privacy
+                policy.
               </p>
             </div>
 
             <div className="mt-8 flex justify-center items-stretch gap-8 text-center">
               <div className="flex flex-col items-center justify-between py-4">
-                <div className="text-2xl font-bold text-[var(--primary)] opacity-30">10</div>
+                <div className="text-2xl font-bold text-[var(--primary)] opacity-30">
+                  10
+                </div>
                 <div className="text-xs text-[var(--text-muted)]">Scenes</div>
               </div>
               <div className="flex flex-col items-center justify-between py-4">
                 <Sparkles className="size-6 text-[var(--primary)] opacity-30" />
-                <div className="text-xs text-[var(--text-muted)]">AI-powered</div>
+                <div className="text-xs text-[var(--text-muted)]">
+                  AI-powered
+                </div>
               </div>
             </div>
           </motion.div>
