@@ -35,7 +35,7 @@ export default function PixelatedImage({
     const canvas = colorCanvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
     // Use a small canvas for sampling

@@ -93,9 +93,12 @@ export async function POST(request: NextRequest) {
           setup: {
             step1: "Install Modal CLI: pip install modal",
             step2: "Authenticate: modal token new",
-            step3: "Deploy: cd modal && modal deploy sharp_api.py",
+            step3_dev: "Deploy to dev: cd modal && modal deploy sharp_api.py",
+            step3_prod:
+              "Deploy to prod: cd modal && MODAL_ENV=prod modal deploy sharp_api.py",
             step4: "Copy the web endpoint URL and add as MODAL_ENDPOINT_URL",
             step5: "Redeploy your application",
+            note: "Default deploys to 'apple-sharp-dev'. Use MODAL_ENV=prod for production.",
           },
         },
         { status: 500 },
@@ -176,16 +179,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Decode the PLY data from base64
+    // Decode the model data from base64 (support both SOG and PLY formats)
+    // SOG format is preferred, but fall back to PLY for backwards compatibility
+    const sogBase64 = result.sog_base64;
     const plyBase64 = result.ply_base64;
-    if (!plyBase64) {
+    const modelBase64 = sogBase64 || plyBase64;
+    const modelFormat = sogBase64 ? "sog" : "ply";
+
+    if (!modelBase64) {
       return NextResponse.json(
-        { error: "3D generation failed - no PLY data received" },
+        { error: "3D generation failed - no model data received" },
         { status: 500 },
       );
     }
 
-    const plyBuffer = Buffer.from(plyBase64, "base64");
+    const modelBuffer = Buffer.from(modelBase64, "base64");
 
     let modelUrl: string;
 
@@ -195,20 +203,30 @@ export async function POST(request: NextRequest) {
       if (!existsSync(outputsDir)) {
         await mkdir(outputsDir, { recursive: true });
       }
-      const modelFileName = `${id}.ply`;
+      const modelFileName = `${id}.${modelFormat}`;
       const modelFilePath = path.join(outputsDir, modelFileName);
-      await writeFile(modelFilePath, plyBuffer);
+      await writeFile(modelFilePath, modelBuffer);
       modelUrl = `/outputs/${modelFileName}`;
-      console.log("Local dev: saved PLY to", modelFilePath);
+      console.log(
+        `Local dev: saved ${modelFormat.toUpperCase()} to`,
+        modelFilePath,
+      );
     } else {
       // Production: upload to Vercel Blob
-      const modelFileName = `outputs/${id}.ply`;
-      const modelBlob = await put(modelFileName, new Blob([plyBuffer]), {
+      const modelFileName = `outputs/${id}.${modelFormat}`;
+      const contentType =
+        modelFormat === "sog"
+          ? "application/octet-stream"
+          : "application/x-ply";
+      const modelBlob = await put(modelFileName, new Blob([modelBuffer]), {
         access: "public",
-        contentType: "application/x-ply",
+        contentType,
       });
       modelUrl = modelBlob.url;
-      console.log("Successfully uploaded PLY to Vercel Blob:", modelUrl);
+      console.log(
+        `Successfully uploaded ${modelFormat.toUpperCase()} to Vercel Blob:`,
+        modelUrl,
+      );
     }
 
     // Extract scene name from original filename
@@ -221,7 +239,7 @@ export async function POST(request: NextRequest) {
           name: sceneName,
           imageUrl: imageUrl,
           modelUrl: modelUrl,
-          modelType: "ply",
+          modelType: modelFormat,
           userId: session.user.id,
         },
       }),
@@ -232,15 +250,18 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    console.log("Successfully generated 3D Gaussian splats:", modelUrl);
+    console.log(
+      `Successfully generated 3D Gaussian splats (${modelFormat.toUpperCase()}):`,
+      modelUrl,
+    );
 
     return NextResponse.json({
       success: true,
       sceneId: scene.id,
       modelUrl: modelUrl,
       imageUrl: imageUrl,
-      modelType: "ply",
-      message: "3D Gaussian splats generated successfully using Apple Sharp",
+      modelType: modelFormat,
+      message: `3D Gaussian splats generated successfully using Apple Sharp (${modelFormat.toUpperCase()} format)`,
       usage: {
         sceneCount: updatedUser.sceneCount,
         isPaid: updatedUser.isPaid,
@@ -314,8 +335,9 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Apple Sharp - Image to 3D Gaussian Splats API",
+    message: "Apple Sharp - Image to 3D Gaussian Splats API (SOG format)",
     model: "apple/Sharp (via Modal)",
+    format: "SOG (Spatially Ordered Gaussians) - 15-20x smaller than PLY",
     endpoints: {
       POST: "Upload an image to convert to 3D Gaussian splats (requires authentication)",
     },
@@ -326,9 +348,12 @@ export async function GET() {
     setup: {
       step1: "Install Modal CLI: pip install modal",
       step2: "Authenticate: modal token new",
-      step3: "Deploy: cd modal && modal deploy sharp_api.py",
+      step3_dev: "Deploy to dev: cd modal && modal deploy sharp_api.py",
+      step3_prod:
+        "Deploy to prod: cd modal && MODAL_ENV=prod modal deploy sharp_api.py",
       step4: "Copy the web endpoint URL (ends with /generate)",
       step5: "Add MODAL_ENDPOINT_URL to your environment variables",
+      note: "Default deploys to 'apple-sharp-dev'. Use MODAL_ENV=prod for production.",
     },
   });
 }

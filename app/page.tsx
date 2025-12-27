@@ -41,7 +41,7 @@ type ProcessingStage =
   | "complete"
   | "error";
 
-type ModelType = "ply" | "glb" | "gltf";
+type ModelType = "sog" | "ply" | "glb" | "gltf";
 
 interface SetupInstructions {
   step1: string;
@@ -108,7 +108,7 @@ function HomeContent() {
     undefined,
   );
   const [modelUrl, setModelUrl] = useState<string | null>(null);
-  const [modelType, setModelType] = useState<ModelType>("glb");
+  const [modelType, setModelType] = useState<ModelType>("sog");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null); // Vercel Blob URL for sharing
   const [error, setError] = useState<string | null>(null);
@@ -370,7 +370,7 @@ function HomeContent() {
 
         // Set the model URL and type from response
         const newModelUrl = data.modelUrl;
-        const newModelType = data.modelType || "glb";
+        const newModelType = data.modelType || "sog";
         const newImageUrl = data.imageUrl || null;
         setModelUrl(newModelUrl);
         setModelType(newModelType);
@@ -584,7 +584,7 @@ function HomeContent() {
         setProgress(100);
 
         setModelUrl(data.modelUrl);
-        setModelType(data.modelType || "glb");
+        setModelType(data.modelType || "sog");
         setImageUrl(data.imageUrl || null);
 
         if (data.usage) {
@@ -759,7 +759,7 @@ function HomeContent() {
         // Only update the viewing state if user is still watching
         if (isWatchingProcessingRef.current) {
           setModelUrl(data.modelUrl);
-          setModelType(data.modelType || "glb");
+          setModelType(data.modelType || "sog");
           setImageUrl(data.imageUrl || null);
           setCurrentSceneName(sceneName);
           setOriginalPrompt(updatedPrompt);
@@ -809,7 +809,7 @@ function HomeContent() {
     setError(null);
     setCurrentSceneName(null);
     setModelUrl(null);
-    setModelType("glb");
+    setModelType("sog");
     setImageUrl(null);
     setOriginalPrompt(null);
     // Note: We intentionally do NOT clear inProgressScene or isRegenerating here
@@ -826,7 +826,7 @@ function HomeContent() {
     setProgress(0);
     setStageProgress(undefined);
     setModelUrl(null);
-    setModelType("glb");
+    setModelType("sog");
     setPreviewUrl(null);
     setImageUrl(null);
     setError(null);
@@ -885,8 +885,8 @@ function HomeContent() {
     if (stage) setProcessingStage(stage);
     if (prog !== undefined) setProgress(prog);
     if (state === "viewing") {
-      setModelUrl("/outputs/sample.glb"); // Fake URL for preview
-      setModelType("glb");
+      setModelUrl("/outputs/sample.sog"); // Fake URL for preview
+      setModelType("sog");
       // Start with loading state mocked so we can see the loading UI
       setViewerDebugLoading(50);
       setViewerDebugError(undefined);
