@@ -7,7 +7,7 @@ export interface SavedScene {
   name: string;
   imageUrl: string;
   modelUrl: string;
-  modelType: "ply" | "glb" | "gltf";
+  modelType: "sog" | "ply" | "glb" | "gltf";
   createdAt: string; // ISO date string from database
 }
 
@@ -51,7 +51,7 @@ export function useScenesHistory() {
           name: scene.name,
           imageUrl: scene.imageUrl,
           modelUrl: scene.modelUrl,
-          modelType: scene.modelType as "ply" | "glb" | "gltf",
+          modelType: scene.modelType as "sog" | "ply" | "glb" | "gltf",
           createdAt: scene.createdAt,
         }),
       );
