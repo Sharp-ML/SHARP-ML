@@ -98,7 +98,7 @@ MODAL_ENDPOINT_URL="https://..."
 BLOB_READ_WRITE_TOKEN="..."
 ```
 
-### Step 7: Enable Vercel Blob Storage
+### Step 6: Enable Vercel Blob Storage
 
 1. Go to your project on Vercel
 2. Navigate to **Storage** → **Create Database** → **Blob**
