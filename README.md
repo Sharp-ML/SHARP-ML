@@ -1,7 +1,5 @@
 # SHARP 3D — Transform Photos to 3D
 
-[Currently paused]
-
 A web application that converts any image into an interactive 3D scene using Apple's SHARP model for Gaussian splatting.
 https://sharp-ml.vercel.app/
 
