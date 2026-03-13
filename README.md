@@ -255,5 +255,3 @@ Subsequent requests while the container is warm are much faster (~1-5s).
 ## License
 
 This web interface is open source under the MIT License.
-
-Development is currently paused.
